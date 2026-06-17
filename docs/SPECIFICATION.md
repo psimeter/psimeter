@@ -241,6 +241,22 @@ sequenceDiagram
 ### 7.5 Precognition variant
 The choice must be committed *before* the target exists. Sequence: operator commits (and signs) their forced choice, bound to a **future** beacon round `R`; wait until `R` publishes; derive the target from `B_R` (and/or fresh physical entropy gathered strictly after the choice); reveal. This yields a trial that is fully reproducible by anyone yet provably unpredictable at choice time — fraud-proof in both directions.
 
+### 7.6 Implementation status (Phase 1)
+Built and verified end-to-end (TypeScript server + independent Python re-verification):
+- Operator **Ed25519 signing** of the pre-commitment before the `session.open` is logged (D6).
+- Live **drand** beacon bound into every session (freshness / anti-precomputation).
+- One-way generation with a **streaming Merkle commitment**.
+- **Raw stream persisted**, content-addressed by SHA-256, re-verified against *both* the flat hash and the Merkle root.
+- **Hash-chained** append-only ledger; integrity re-derived in Python.
+- **External-anchor receipts** (`npm run anchor`) ready to publish.
+
+Residual hardening before confirmatory data collection (tracked, not yet done):
+- In-process **BLS verification** of the drand signature (today the round is recorded for independent re-fetch; the server trusts the drand endpoint at fetch time).
+- **Ed25519 signature verification inside `analyze.py`** (optional `cryptography` dependency; the chain and blobs are already verified with the standard library only).
+- **Vendor** the client's `@noble/ed25519` + `three` (currently loaded from the esm.sh CDN) with integrity hashes, for offline use and supply-chain safety.
+- **Automated** external-anchor submission to a TSA / OpenTimestamps (today the receipt is produced and published manually).
+- **Live witnesses** to fully close the residual "parallel-runs" attack (§7.4).
+
 ---
 
 ## 8. Architecture & Phase 1 skeleton

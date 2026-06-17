@@ -58,8 +58,12 @@ cargo build --release --manifest-path packages/entropy-provider/Cargo.toml
 # run the server, then open http://localhost:8787 and run a session in the browser
 npm start
 
-# verify & score whatever sessions are in the ledger, independently, from Python
+# verify & score the ledger independently from Python: chain integrity, raw-blob
+# round-trip (flat SHA-256 + Merkle), per-intention scoring, external anchors
 python analysis/analyze.py ledger/dev.jsonl
+
+# after a batch of sessions, anchor the ledger head and publish the receipt
+npm run anchor
 ```
 
 Headless transport check (no browser): `PSYMETER_FAST=1 PSYMETER_ENTROPY=os npm run smoke`.
