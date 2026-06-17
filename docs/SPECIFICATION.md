@@ -364,8 +364,23 @@ Statistical validity depends only on collecting the pre-declared **N independent
 
 ## 9. Phasing
 
-- **Phase 0 (now):** Lock the methodology (D1–D5 done) and the provenance flow (§7 drafted). *No production code until the science is airtight.*
-- **Phase 1:** Local build — one experiment (binary micro-PK), full provenance + storage + a minimal three.js feedback view, deterministic analysis script. `OsEntropySource` for CI/plumbing; the owner's **own local self-tests run on `RDSEED` (real physical, pilot-grade)** so they are meaningful, not throwaway.
-- **Phase 2:** Second experiment (two-color precognition); operator identity model; leaderboard done correctly.
+- **Phase 0 — DONE:** Methodology locked (D1–D13) and the provenance flow specified (§7).
+- **Phase 1 — DONE:** Local instrument — binary micro-PK with the full provenance spine (operator signing → drand beacon → one-way generation → streaming Merkle → content-addressed raw-blob persistence → hash-chained ledger → external-anchor receipts), RDSEED real-entropy self-testing, and independent Python verification.
+- **Phase 2 (next):** The **public website** (see §10) + the **two-color precognition** experiment; per-operator identity & history; the leaderboard/aggregate view done correctly (D4).
 - **Phase 3:** Hardware TRNG/QRNG integration + characterization; live witnesses + external ledger anchoring; cloud deployment (likely AWS); pre-registration finalized.
 - **Phase 4:** Confirmatory collection period → public dataset release → paper.
+
+---
+
+## 10. Public website (Phase 2)
+
+PsyMeter has two equally important faces: the scientific instrument (above) and a **public, gamified website** that strangers worldwide will actually use. Engagement is the data-collection engine (sample size powers H1/H2) — but **the gamification must never alter the protocol or misrepresent what a result means.**
+
+### Required sections
+1. **About / how it works.** A friendly, skeptic-accessible explanation of the purpose, the method, and — crucially — *how the cryptographic auditability works* (why you don't have to trust us). A readable on-ramp, not the paper.
+2. **Experiments browser.** Browse available experiments with summary stats; a per-experiment detail page (protocol, parameters, aggregate history) with the option to run a session; and **each visitor's own run history, tied to their browser-held Ed25519 operator key (D6)** — pseudonymous, no PII.
+3. **Leaderboard / aggregate view.** Global results across all sessions/experiments with anomaly counts and effect sizes **against the empirically calibrated null** — presented honestly: individual high-σ runs are expected by chance and are NOT evidence (D4); the science is the pre-registered aggregate.
+4. **Gamified experiment UI.** Pretty and engaging enough that people *want* to play. The **anchor must be shown large and central** — in ESP protocols it is the mental focal point the operator concentrates on — alongside the live feedback. Frame it as a game to "beat," which underneath is faithful participation in the real experiment.
+
+### Constraints carried from the science
+One-way isolation (pillar 5) is unchanged. The anchor is the signed pre-commitment fingerprint (§7.2). Per-user history and any "skill"/leaderboard framing must respect **D4** (leaderboard ≠ proof), **D12** (experimenter/operator self-deception guards), and **D13** (a single session is not evidence). Open build decisions for Phase 2: client framework/bundler (the current client is a bundler-less three.js + import-map stub), the aggregate-stats API + storage, vendoring CDN dependencies with integrity hashes, and the §7.6 residual-hardening items.
