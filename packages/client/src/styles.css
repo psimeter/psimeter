@@ -187,28 +187,141 @@ body.focus .site-footer { display: none; }
 }
 .callout.warn { border-left-color: var(--warn); }
 
-/* numbered verification chain (about page) */
-.steps { display: grid; gap: 12px; margin: 20px 0 8px; }
-.step { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
-  background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
-.step .n {
-  width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
-  font-family: var(--mono); font-weight: 650; font-size: 14px;
-  color: var(--accent-bright); background: var(--accent-deep); border: 1px solid #2a3d5e;
+/* ====================================================================
+   ABOUT / HOW IT WORKS — wide, dual-audience layout (spec §10.1)
+   ==================================================================== */
+.about { max-width: 1140px; }
+.about p { color: #cdd6e2; }
+
+.about-hero { max-width: 70ch; margin: 0 0 8px; }
+.about-hero h1 { font-size: clamp(28px, 5vw, 44px); margin: 10px 0 0; letter-spacing: -0.025em; }
+.about-hero .lede { margin: 16px 0 0; }
+.about-hero .rule {
+  margin: 16px 0 0; padding: 14px 18px; font-size: clamp(15px, 2vw, 17px);
+  color: var(--text); font-weight: 550; line-height: 1.5;
+  border-left: 3px solid var(--accent); background: var(--bg-1);
+  border-radius: 0 10px 10px 0;
 }
-.step .body h3 { margin: 2px 0 6px; font-size: 15.5px; }
-.step .body p { margin: 0; color: #cdd6e2; }
+.audience-hint {
+  display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 20px 0 0;
+  color: var(--text-dim); font-size: 13.5px;
+}
+.audience-hint strong { color: var(--text); }
+
+.about-h2 { margin: 56px 0 6px; font-size: clamp(20px, 3vw, 26px); letter-spacing: -0.01em; }
+.about-h2.first { margin-top: 0; }
+.section-lede { max-width: 76ch; color: var(--text-dim) !important; margin: 0 0 22px; font-size: clamp(14px, 1.8vw, 16px); }
+.section-lede.single { max-width: 76ch; }
+
+/* TL;DR cards */
+.tldr-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 18px 0 8px;
+}
+.tldr { display: flex; flex-direction: column; gap: 8px; }
+.tldr-ico { font-size: 26px; line-height: 1; }
+.tldr h3 { margin: 0; font-size: 15.5px; }
+.tldr p { margin: 0; color: var(--text-dim); font-size: 13.5px; }
+
+/* numbered chain of evidence — responsive grid of cards */
+.chain-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 4px 0 8px;
+}
+.chain-card { position: relative; padding-top: 22px; }
+.chain-card .n {
+  position: absolute; top: -14px; left: 18px;
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
+  font-family: var(--mono); font-weight: 650; font-size: 15px;
+  color: var(--accent-bright); background: var(--accent-deep); border: 1px solid #2a3d5e;
+  box-shadow: 0 6px 18px -8px var(--accent-glow);
+}
+.chain-card h3 { margin: 6px 0 8px; font-size: 16px; }
+.chain-card p { margin: 0; color: #cdd6e2; font-size: 13.5px; }
+
+/* emphasised callout with a mark */
+.big-callout { display: flex; gap: 16px; align-items: flex-start; padding: 18px 22px; margin: 26px 0; }
+.big-callout .callout-mark { font-size: 26px; color: var(--accent); line-height: 1; flex: none; }
+
+/* two-column contrast blocks (result meaning, hypotheses) */
+.twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 4px 0; }
+.twocol h3 { margin: 0 0 12px; font-size: 16px; }
+.twocol ul { margin: 0; padding-left: 18px; }
+.twocol li { margin: 9px 0; color: #cdd6e2; font-size: 13.5px; }
+.twocol strong { color: var(--text); }
+.col-good { border-color: #1f5c46; box-shadow: inset 0 0 0 1px rgba(89,211,163,0.08); }
+.col-good h3 { color: var(--good); }
+.col-bad { border-color: #5c2b2b; box-shadow: inset 0 0 0 1px rgba(255,107,107,0.07); }
+.col-bad h3 { color: var(--danger); }
+
+/* the skeptics' deep-dive band */
+.rigor {
+  margin: 64px 0 0; padding: clamp(24px, 4vw, 44px); border-radius: var(--radius-lg);
+  border: 1px solid var(--line); background:
+    radial-gradient(900px 360px at 50% -40%, rgba(110,168,254,0.07), rgba(110,168,254,0) 70%),
+    var(--bg-1);
+}
+.rigor-h3 { margin: 40px 0 8px; font-size: 17px; color: var(--text); }
+.rigor .twocol .card { background: var(--bg-2); }
+
+.hyp { position: relative; }
+.hyp .badge { font-family: var(--mono); color: var(--accent-bright); border-color: #2a3d5e; }
+.hyp h4 { margin: 10px 0 8px; font-size: 16px; }
+.hyp p { margin: 0; color: var(--text-dim); font-size: 13.5px; }
+
+.guarantees { display: grid; grid-template-columns: minmax(160px, 220px) 1fr; gap: 1px; margin: 4px 0 0;
+  background: var(--line-soft); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.guarantees dt { background: var(--bg-2); padding: 13px 16px; color: var(--text); font-weight: 600; font-size: 13.5px; }
+.guarantees dd { background: var(--bg-1); padding: 13px 16px; margin: 0; color: var(--text-dim); font-size: 13.5px; }
+
+.ladder { display: grid; gap: 10px; margin: 4px 0 0; }
+.rung { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.rung.mid { border-color: #2a3d5e; }
+.rung.top { border-color: #1f5c46; box-shadow: inset 0 0 0 1px rgba(89,211,163,0.08); }
+.rung-tag { align-self: center; font-family: var(--mono); font-size: 13px; color: var(--accent-bright);
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; white-space: nowrap; min-width: 96px; text-align: center; }
+.rung.top .rung-tag { color: var(--good); }
+.rung-name { font-weight: 600; font-size: 14.5px; color: var(--text); margin-bottom: 2px; }
+.rung p { margin: 0; color: var(--text-dim); font-size: 13px; }
+
+.codeblock { background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; margin: 0 0 18px; overflow-x: auto; }
+.codeblock code { font-family: var(--mono); font-size: 13px; color: var(--accent-bright); }
+
+.callout.closing { margin-top: 40px; line-height: 2; }
+.callout.closing .btn { vertical-align: middle; margin-left: 6px; }
 
 /* ---------- home / hero ---------- */
-.hero { text-align: center; padding: clamp(20px, 6vh, 60px) 0 28px; }
-.hero h1 { font-size: clamp(30px, 6vw, 52px); margin: 14px 0 0; letter-spacing: -0.03em; }
-.hero .lede { max-width: 60ch; margin: 18px auto 0; color: var(--text-dim); font-size: clamp(15px, 2.2vw, 18px); }
-.hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
+/* Ambient three.js network sits fixed behind the content; a veil keeps the
+   hero text readable. Both are torn down when the route changes. */
+.home { position: relative; }
+.home-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.home-veil {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(62% 52% at 50% 34%, rgba(7,9,13,0.82), rgba(7,9,13,0.34) 64%, rgba(7,9,13,0) 100%),
+    linear-gradient(to bottom, rgba(7,9,13,0.55), rgba(7,9,13,0) 22%, rgba(7,9,13,0) 80%, var(--bg) 100%);
+}
+.home-page { position: relative; z-index: 2; }
 
-.pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 44px; }
-.pillar h3 { margin: 0 0 6px; font-size: 15px; }
+.hero { text-align: center; padding: clamp(28px, 9vh, 96px) 0 30px; }
+.hero h1 { font-size: clamp(32px, 6.4vw, 60px); margin: 16px 0 0; letter-spacing: -0.035em; line-height: 1.05; }
+.hero h1 .grad {
+  background: linear-gradient(100deg, var(--accent-bright), #c9b8ff 55%, var(--accent));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero .lede { max-width: 60ch; margin: 20px auto 0; color: var(--text-dim); font-size: clamp(15px, 2.2vw, 19px); }
+.hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+.hero .btn.primary.lg { box-shadow: 0 10px 40px -12px var(--accent-glow); }
+.hero .hero-note { color: var(--text-faint); font-size: 13px; margin: 18px auto 0; }
+
+.pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 52px; position: relative; z-index: 2; }
+.pillar { background: color-mix(in srgb, var(--bg-1) 86%, transparent); backdrop-filter: blur(6px); }
+.pillar h3 { margin: 6px 0 6px; font-size: 15.5px; }
 .pillar p { margin: 0; color: var(--text-dim); font-size: 13.5px; }
-.pillar .ico { font-size: 18px; }
+.pillar .ico { font-size: 18px; color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero { padding-top: clamp(20px, 6vh, 60px); }
+}
 
 /* ====================================================================
    RUNNER — the gamified experiment UI (spec §10)
@@ -349,4 +462,11 @@ body.focus .site-footer { display: none; }
   .nav { display: none; }
   .hud .item .v { font-size: 16px; }
   .rowlink .rank, .rowlink .faint.mono { display: none; }
+
+  /* about: stack the guarantees table so the value column isn't a word-per-line */
+  .guarantees { grid-template-columns: 1fr; }
+  .guarantees dt { padding-bottom: 4px; }
+  .guarantees dd { padding-top: 4px; }
+  .rung { grid-template-columns: 1fr; gap: 8px; }
+  .rung-tag { justify-self: start; }
 }

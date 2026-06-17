@@ -12,7 +12,8 @@ import { defineConfig } from 'vite';
 // proxy. If you run the server on a non-default port, point the proxy at it.
 export default defineConfig({
   server: {
-    port: 5173,
+    port: Number(process.env.PORT) || 5173,
+    strictPort: !!process.env.PORT,
     proxy: {
       '/api': {
         target: 'http://localhost:8787',
