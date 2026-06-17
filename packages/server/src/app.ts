@@ -3,10 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { BeaconRef, EntropySource, Intention } from '@psymeter/core';
+import type { EntropySource, Intention } from '@psymeter/core';
 import { LedgerStore } from './ledgerStore.js';
 import { loadExperiment } from './experiments.js';
 import { selectEntropySource } from './select.js';
+import { selectBeacon, type BeaconProvider } from './beacon.js';
 import { commitOpen, generateAndSeal, prepareSession, type SessionContext } from './session.js';
 import { verifyEd25519 } from './sign.js';
 
@@ -47,6 +48,7 @@ export function createApp(): http.Server {
   const store = new LedgerStore(ledgerPath);
   store.ensureGenesis();
   const entropy: EntropySource = selectEntropySource();
+  const beaconProvider = selectBeacon();
   const sessions = new Map<string, SessionContext>();
 
   // eslint-disable-next-line no-console
@@ -54,10 +56,15 @@ export function createApp(): http.Server {
     `[entropy] using "${entropy.id}" (${entropy.kind}), confirmatory=${entropy.confirmatory}` +
       (entropy.confirmatory ? '' : '  - NON-CONFIRMATORY: pipeline/pilot only, not scientific data'),
   );
+  // eslint-disable-next-line no-console
+  console.log(
+    `[beacon] using "${beaconProvider.id}"` +
+      (beaconProvider.id === 'dev' ? '  - NON-CONFIRMATORY placeholder (offline)' : ''),
+  );
 
   const server = http.createServer((req, res) => {
     if (req.method === 'POST' && req.url === '/api/sessions') {
-      void handleCreateSession(req, res, store, entropy, sessions);
+      void handleCreateSession(req, res, store, entropy, beaconProvider, sessions);
       return;
     }
     const signMatch = req.method === 'POST' ? req.url?.match(SIGN_ROUTE) : null;
@@ -91,6 +98,7 @@ async function handleCreateSession(
   res: http.ServerResponse,
   store: LedgerStore,
   entropy: EntropySource,
+  beaconProvider: BeaconProvider,
   sessions: Map<string, SessionContext>,
 ): Promise<void> {
   try {
@@ -111,8 +119,8 @@ async function handleCreateSession(
       return;
     }
 
-    // TODO(beacon): replace this dev placeholder with a live drand/NIST pulse.
-    const beacon: BeaconRef = { source: 'dev', round: 0, value: '00' };
+    // Bind a fresh public beacon pulse so the session provably postdates it (D2).
+    const beacon = await beaconProvider.fetchPulse();
 
     const ctx = prepareSession(store, { experiment, intention, operatorPubKey: body.operatorPubKey, beacon, source: entropy });
     sessions.set(ctx.sessionId, ctx);

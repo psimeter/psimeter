@@ -35,9 +35,15 @@ export interface EntropySource {
   health(): Promise<{ ok: boolean; detail?: string }>;
 }
 
-/** Reference to an external public randomness beacon pulse (spec §7). */
+/**
+ * Reference to an external public randomness beacon pulse (spec §7).
+ * Recording the round + value + signature lets any auditor independently
+ * re-fetch the pulse and confirm the session could not predate it.
+ */
 export interface BeaconRef {
-  source: string;
+  source: string; // 'drand' | 'dev'
   round: number;
-  value: string;
+  value: string; // randomness (hex)
+  chainHash?: string; // beacon chain id (hex)
+  signature?: string; // BLS signature over the round (hex)
 }
