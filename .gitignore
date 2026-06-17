@@ -1,0 +1,21 @@
+# dependencies / build output
+node_modules/
+dist/
+**/target/
+coverage/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# local dev ledger output (regenerated; not the published dataset)
+ledger/*.jsonl
+ledger/blobs/
+
+# misc
+*.log
+.DS_Store
+
+# local agent / editor config (not part of the published project)
+.claude/

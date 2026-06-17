@@ -1,0 +1,23 @@
+{
+  "name": "@psymeter/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Auditable cryptographic core: canonicalization, hashing, commitments, Merkle, ledger chaining, scoring. Pure and I/O-free.",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node --test dist/test/core.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}

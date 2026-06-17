@@ -1,0 +1,6 @@
+# The core ledger verification + scoring in analyze.py uses ONLY the standard
+# library (so anyone can re-run it with a bare Python install). These are for the
+# richer confirmatory analyses to come: calibrated-null comparison, variance and
+# tail-excess tests (H2), and per-operator split-half reliability (H1).
+numpy>=1.26
+scipy>=1.11

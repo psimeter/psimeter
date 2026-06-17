@@ -1,0 +1,3 @@
+# This directory holds LOCAL DEV ledger output (e.g. dev.jsonl), which is
+# git-ignored and regenerated. It is NOT the published, externally-anchored
+# dataset described in docs/SPECIFICATION.md §7.

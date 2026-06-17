@@ -1,0 +1,19 @@
+{
+  "name": "psymeter",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Auditable platform for large-scale RNG-influence (micro-PK) and precognition experiments.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "test": "npm --workspace @psymeter/core run test",
+    "build:core": "npm --workspace @psymeter/core run build",
+    "start": "npm --workspace @psymeter/server run start",
+    "smoke": "npm --workspace @psymeter/server run smoke"
+  }
+}

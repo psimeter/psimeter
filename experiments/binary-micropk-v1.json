@@ -1,0 +1,17 @@
+{
+  "id": "binary-micropk",
+  "version": 1,
+  "title": "Binary micro-PK (RNG influence)",
+  "kind": "micro-pk-binary",
+  "params": {
+    "trialBits": 200,
+    "bitRatePerSec": 1000,
+    "sessionSeconds": 180,
+    "trialsPerSession": 900,
+    "bitsPerSession": 180000,
+    "checkpointEveryTrials": 5,
+    "intentionAssignment": "volitional",
+    "conditioning": "none"
+  },
+  "intentions": ["HIGH", "LOW", "BASELINE"]
+}
