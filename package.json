@@ -13,6 +13,9 @@
   "scripts": {
     "test": "npm --workspace @psymeter/core run test",
     "build:core": "npm --workspace @psymeter/core run build",
+    "build:client": "npm --workspace @psymeter/client run build",
+    "typecheck:client": "npm --workspace @psymeter/client run typecheck",
+    "dev:client": "npm --workspace @psymeter/client run dev",
     "start": "npm --workspace @psymeter/server run start",
     "smoke": "npm --workspace @psymeter/server run smoke",
     "anchor": "npm --workspace @psymeter/server run anchor"

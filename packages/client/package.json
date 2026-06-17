@@ -2,9 +2,21 @@
   "name": "@psymeter/client",
   "version": "0.0.0",
   "private": true,
-  "description": "PsyMeter operator UI (three.js) — Phase 1 stub.",
+  "description": "PsyMeter public website (Phase 2): gamified experiment UI + how-it-works, Vite + TS, no CDN imports.",
   "type": "module",
   "scripts": {
-    "serve": "node --experimental-default-type=module ../../node_modules/.bin/http-server . -p 5173 || echo 'serve index.html with any static server'"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5173",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^2.1.0",
+    "three": "^0.161.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.161.0",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.10"
   }
 }

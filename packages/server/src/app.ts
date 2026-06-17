@@ -13,7 +13,10 @@ import { verifyEd25519 } from './sign.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
-const clientDir = resolve(repoRoot, 'packages/client');
+// The built public site (Vite output). Populate it with `npm run build:client`;
+// for hot-reload development use `npm run dev:client` (Vite serves on :5173 and
+// proxies /api back to this server).
+const clientDir = resolve(repoRoot, 'packages/client/dist');
 // Relative PSYMETER_LEDGER values resolve against the repo root; absolute paths
 // are honored as-is. Lets each experiment campaign keep its own ledger file.
 const ledgerPath = resolve(repoRoot, process.env.PSYMETER_LEDGER ?? 'ledger/dev.jsonl');
@@ -25,10 +28,30 @@ const FAST = process.env.PSYMETER_FAST === '1';
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json',
   '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8',
 };
+
+/** Shown when the server runs but the client has not been built yet. */
+const NOT_BUILT_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>PsyMeter — build the client</title></head>
+<body style="font-family:system-ui;background:#07090d;color:#e8edf4;max-width:640px;margin:48px auto;padding:0 20px;line-height:1.6">
+<h1 style="font-weight:650">PsyMeter server is running</h1>
+<p>The public site hasn't been built yet. From the repo root:</p>
+<pre style="background:#10151d;border:1px solid #1d2632;padding:14px;border-radius:8px;overflow:auto">npm run build:client   <span style="color:#5e6b7c"># production build, served from here</span>
+<span style="color:#5e6b7c"># or, for live development with hot reload:</span>
+npm run dev:client     <span style="color:#5e6b7c"># Vite on :5173, proxies /api to this server</span></pre>
+<p>The API is already up at <code>/api</code>.</p>
+</body></html>`;
 
 const SIGN_ROUTE = /^\/api\/sessions\/([^/]+)\/sign$/;
 
@@ -224,19 +247,39 @@ function safeSend(ws: WebSocket, obj: unknown): void {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
 }
 
+/**
+ * Serve the built single-page site. Real files (hashed JS/CSS assets) are served
+ * directly; navigation routes with no file extension (e.g. /about, /run) fall
+ * back to index.html so deep links and reloads work client-side. If the build is
+ * missing entirely, show a friendly "run the build" page instead of a bare 404.
+ */
 async function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const rel = decodeURIComponent((req.url ?? '/').split('?')[0]!);
+  const isNavigation = extname(rel) === '';
   const fsPath = resolve(clientDir, '.' + (rel === '/' ? '/index.html' : rel));
   if (!fsPath.startsWith(clientDir)) {
     res.writeHead(403).end('forbidden');
     return;
   }
+  if (await tryServeFile(fsPath, res)) return;
+  if (isNavigation) {
+    if (await tryServeFile(resolve(clientDir, 'index.html'), res)) return;
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(NOT_BUILT_HTML);
+    return;
+  }
+  res.writeHead(404).end('not found');
+}
+
+/** Read and send a file; returns false (without responding) if it is absent. */
+async function tryServeFile(fsPath: string, res: http.ServerResponse): Promise<boolean> {
   try {
     const data = await readFile(fsPath);
     res.writeHead(200, { 'content-type': CONTENT_TYPES[extname(fsPath)] ?? 'application/octet-stream' });
     res.end(data);
+    return true;
   } catch {
-    res.writeHead(404).end('not found');
+    return false;
   }
 }
 

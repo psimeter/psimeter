@@ -2,91 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PsyMeter — session</title>
-    <style>
-      :root { color-scheme: dark; }
-      * { box-sizing: border-box; }
-      body { margin: 0; background: #0b0e14; color: #e6e6e6; font-family: system-ui, sans-serif; }
-      header { padding: 14px 20px; border-bottom: 1px solid #20262f; }
-      header h1 { font-size: 15px; margin: 0; font-weight: 600; }
-      header p { margin: 4px 0 0; font-size: 12px; color: #8b97a7; }
-
-      #hud { display: none; gap: 26px; padding: 12px 20px; font-size: 13px; align-items: center; }
-      #hud .k { color: #8b97a7; }
-      #hud b { color: #fff; font-variant-numeric: tabular-nums; }
-      #grade { margin-left: auto; font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid #3a4654; color: #b9c6d6; }
-      #grade.warn { border-color: #7a5a18; color: #f0c674; }
-
-      #stage { width: 100%; height: calc(100vh - 200px); display: block; }
-      .note { padding: 8px 20px; font-size: 12px; color: #6b7787; }
-
-      .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(8,11,16,0.86); }
-      .card { width: min(440px, 92vw); background: #11161f; border: 1px solid #232c38; border-radius: 14px; padding: 22px; }
-      .card h2 { margin: 0 0 6px; font-size: 16px; }
-      .card p { margin: 0 0 16px; font-size: 13px; color: #9aa7b6; line-height: 1.5; }
-      .choices { display: flex; gap: 10px; margin-bottom: 18px; }
-      .choices button { flex: 1; padding: 12px 0; border-radius: 10px; border: 1px solid #2c3744; background: #161d28; color: #dfe7f0; font-size: 14px; cursor: pointer; }
-      .choices button.sel { border-color: #6ea8fe; background: #1b2940; color: #fff; }
-      .start { width: 100%; padding: 12px; border-radius: 10px; border: none; background: #6ea8fe; color: #0b0e14; font-size: 15px; font-weight: 600; cursor: pointer; }
-      .start:disabled { opacity: 0.5; cursor: default; }
-      .summary dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; margin: 0 0 16px; }
-      .summary dt { color: #8b97a7; }
-      .summary dd { margin: 0; font-variant-numeric: tabular-nums; word-break: break-all; }
-      .hidden { display: none !important; }
-      code { color: #b9c6d6; }
-    </style>
-    <script type="importmap">
-      { "imports": { "three": "https://esm.sh/three@0.161.0" } }
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>PsyMeter — auditable psi experiments</title>
+    <meta
+      name="description"
+      content="An open, cryptographically auditable platform for large-scale experiments on mind–matter interaction. Every result is verifiable from public artifacts — you don't have to trust the experimenter."
+    />
+    <meta name="color-scheme" content="dark" />
   </head>
   <body>
-    <header>
-      <h1>PsyMeter — binary micro-PK</h1>
-      <p>The stream below is generated server-side and delivered one-way. Nothing on this page can influence it.</p>
-    </header>
-
-    <div id="hud">
-      <span><span class="k">anchor</span> <b id="anchor">—</b></span>
-      <span><span class="k">time</span> <b id="timer">—</b></span>
-      <span><span class="k">z (display)</span> <b id="z">0.00</b></span>
-      <span><span class="k">you</span> <b id="who">—</b></span>
-      <span id="grade">—</span>
-    </div>
-
-    <canvas id="stage"></canvas>
-    <p class="note" id="note">Cumulative deviation vs the fair-coin expectation, with ±1.96σ and ±3σ envelopes. Display only — the authoritative score is computed later in <code>analysis/</code>.</p>
-
-    <!-- Start panel -->
-    <div class="overlay" id="start">
-      <div class="card">
-        <h2>Start a session</h2>
-        <p>Choose your intended direction for the random stream, then press start. Your choice is committed cryptographically <em>before</em> any randomness is generated. A persistent anonymous key — kept only in this browser — signs each session as yours.</p>
-        <div class="choices" id="intentions">
-          <button data-i="HIGH" class="sel">HIGH</button>
-          <button data-i="LOW">LOW</button>
-          <button data-i="BASELINE">BASELINE</button>
-        </div>
-        <button class="start" id="startBtn">Start</button>
-      </div>
-    </div>
-
-    <!-- Seal summary -->
-    <div class="overlay hidden" id="summary">
-      <div class="card summary">
-        <h2>Session sealed</h2>
-        <dl>
-          <dt>anchor</dt><dd id="s-anchor">—</dd>
-          <dt>ones / N</dt><dd id="s-ones">—</dd>
-          <dt>z (display)</dt><dd id="s-z">—</dd>
-          <dt>output commitment</dt><dd id="s-commit">—</dd>
-          <dt>raw data</dt><dd id="s-raw">—</dd>
-        </dl>
-        <p>This single-session figure is <strong>not</strong> evidence — chance alone produces such deviations (spec D4/D13). The sealed record is now in the hash-chained ledger; verify it with <code>analysis/analyze.py</code>.</p>
-        <button class="start" id="againBtn">Run another</button>
-      </div>
-    </div>
-
-    <script type="module" src="./src/main.js"></script>
+    <div id="app"></div>
+    <noscript>
+      PsyMeter needs JavaScript to run a live session, sign it with your in-browser
+      key, and render the feedback. The methodology and verification are described at
+      <a href="/about">/about</a>.
+    </noscript>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
