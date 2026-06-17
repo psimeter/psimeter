@@ -12,6 +12,7 @@ import {
   type LedgerEntry,
 } from '@psymeter/core';
 import type { LedgerStore } from './ledgerStore.js';
+import { writeBlob } from './blobStore.js';
 
 /** The integer parameters of a `micro-pk-binary` experiment (spec D13). */
 export interface BinaryParams {
@@ -131,7 +132,7 @@ export interface Checkpoint {
 export async function generateAndSeal(
   ctx: SessionContext,
   store: LedgerStore,
-  opts: { tickMs: number; onCheckpoint: (c: Checkpoint) => void },
+  opts: { tickMs: number; blobDir: string; onCheckpoint: (c: Checkpoint) => void },
 ): Promise<LedgerEntry> {
   if (!ctx.open) throw new Error('session has not been signed/opened');
   const p = ctx.params;
@@ -139,6 +140,7 @@ export async function generateAndSeal(
   const bytesPerTrial = p.trialBits / 8;
 
   const merkle = new MerkleAccumulator();
+  const chunks: Uint8Array[] = [];
   let ones = 0;
   let total = 0;
   let trial = 0;
@@ -147,6 +149,7 @@ export async function generateAndSeal(
     const batchTrials = Math.min(p.checkpointEveryTrials, p.trialsPerSession - trial);
     const block = await ctx.source.read(batchTrials * bytesPerTrial);
     merkle.add(block); // commit to this checkpoint window's raw bytes
+    chunks.push(block); // retain the raw bytes — they ARE the record (D2)
     for (const byte of block) ones += popcount(byte);
     trial += batchTrials;
     total += batchTrials * p.trialBits;
@@ -155,14 +158,31 @@ export async function generateAndSeal(
     if (opts.tickMs > 0 && trial < p.trialsPerSession) await sleep(opts.tickMs);
   }
 
+  // Persist the full raw stream, content-addressed, for independent re-analysis
+  // and verification against the commitments (spec §7.2, D2).
+  const blob = writeBlob(opts.blobDir, concatBytes(chunks));
+
   return store.append('session.seal', {
     sessionId: ctx.sessionId,
     openEntryHash: ctx.open.entryHash,
     outputCommitment: merkle.root(),
+    rawSha256: blob.sha256,
+    rawBlobRef: blob.ref,
+    leafBytes: (p.checkpointEveryTrials * p.trialBits) / 8, // Merkle leaf size, for re-verification
     nSamples: total,
     ones,
-    // TODO: checkpoints[], rawBlobRef (content-addressed raw-stream persistence).
   });
+}
+
+function concatBytes(parts: Uint8Array[]): Uint8Array {
+  const total = parts.reduce((n, part) => n + part.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
 }
 
 function popcount(b: number): number {

@@ -210,5 +210,6 @@ function showSummary(info, seal) {
   $('s-ones').textContent = `${seal.ones} / ${seal.nSamples}`;
   $('s-z').textContent = z.toFixed(3);
   $('s-commit').textContent = seal.outputCommitment;
+  $('s-raw').textContent = seal.rawBlobRef || '—';
   $('summary').classList.remove('hidden');
 }

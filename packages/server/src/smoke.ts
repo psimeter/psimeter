@@ -60,7 +60,7 @@ server.listen(0, async () => {
   ws.on('message', (data) => {
     const m = JSON.parse(data.toString()) as Record<string, unknown>;
     if (m.type === 'checkpoint') checkpoints++;
-    else if (m.type === 'seal') console.log(`  SEAL ones=${m.ones}/${m.nSamples}  commit=${(m.outputCommitment as string).slice(0, 22)}...`);
+    else if (m.type === 'seal') console.log(`  SEAL ones=${m.ones}/${m.nSamples}  raw=${m.rawBlobRef}`);
     else console.log(`  ${JSON.stringify(m)}`);
   });
   ws.on('close', () => {

@@ -17,6 +17,7 @@ const clientDir = resolve(repoRoot, 'packages/client');
 // Relative PSYMETER_LEDGER values resolve against the repo root; absolute paths
 // are honored as-is. Lets each experiment campaign keep its own ledger file.
 const ledgerPath = resolve(repoRoot, process.env.PSYMETER_LEDGER ?? 'ledger/dev.jsonl');
+const blobDir = resolve(dirname(ledgerPath), 'blobs');
 
 /** Pacing is FAST (no inter-checkpoint delay) for tests; off in normal use. */
 const FAST = process.env.PSYMETER_FAST === '1';
@@ -195,10 +196,11 @@ function handleStream(
 
   generateAndSeal(ctx, store, {
     tickMs,
+    blobDir,
     onCheckpoint: (c) => safeSend(ws, { type: 'checkpoint', ...c }),
   })
     .then((seal) => {
-      const payload = seal.payload as { ones: number; nSamples: number; outputCommitment: string };
+      const payload = seal.payload as { ones: number; nSamples: number; outputCommitment: string; rawBlobRef: string };
       safeSend(ws, {
         type: 'seal',
         sessionId: ctx.sessionId,
@@ -206,6 +208,7 @@ function handleStream(
         ones: payload.ones,
         nSamples: payload.nSamples,
         outputCommitment: payload.outputCommitment,
+        rawBlobRef: payload.rawBlobRef,
         openEntryHash: ctx.open!.entryHash,
         sealEntryHash: seal.entryHash,
       });

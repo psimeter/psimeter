@@ -79,6 +79,22 @@ def stouffer(zs: list[float]) -> float:
     return sum(zs) / math.sqrt(len(zs))
 
 
+def merkle_root(leaves: list[bytes]) -> str:
+    """Domain-separated Merkle root mirroring packages/core/src/merkle.ts."""
+    if not leaves:
+        raise ValueError("no leaves")
+    level = [hashlib.sha256(b"\x00" + leaf).digest() for leaf in leaves]
+    while len(level) > 1:
+        nxt = []
+        for i in range(0, len(level), 2):
+            if i + 1 < len(level):
+                nxt.append(hashlib.sha256(b"\x01" + level[i] + level[i + 1]).digest())
+            else:
+                nxt.append(level[i])
+        level = nxt
+    return "sha256:" + level[0].hex()
+
+
 def main(path: str) -> int:
     entries = [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
     print(f"ledger entries: {len(entries)}")
@@ -125,6 +141,30 @@ def main(path: str) -> int:
     if directional:
         dz = stouffer(directional)
         print(f"  intended-direction (HIGH & LOW)  n={len(directional):<3} z = {dz:+.3f}  one-tailed p = {1 - phi(dz):.3f}")
+
+    # raw-data verification (spec D2): the stored blob must reproduce BOTH the
+    # flat SHA-256 and the streaming Merkle commitment recorded in the seal.
+    ledger_dir = Path(path).parent
+    blob_seals = [e["payload"] for e in entries if e["type"] == "session.seal" and "rawBlobRef" in e["payload"]]
+    if blob_seals:
+        print("\nraw-data verification (blob -> commitments):")
+        for s in blob_seals:
+            bp = ledger_dir / s["rawBlobRef"]
+            if not bp.exists():
+                print(f"  {s['sessionId'][:8]}  blob MISSING ({s['rawBlobRef']})")
+                continue
+            data = bp.read_bytes()
+            flat_ok = ("sha256:" + hashlib.sha256(data).hexdigest()) == s.get("rawSha256")
+            leaves = [data[i:i + s["leafBytes"]] for i in range(0, len(data), s["leafBytes"])]
+            merkle_ok = merkle_root(leaves) == s["outputCommitment"]
+            verdict = "OK" if (flat_ok and merkle_ok) else "MISMATCH"
+            print(f"  {s['sessionId'][:8]}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'})")
+
+    anchors = [e["payload"] for e in entries if e["type"] == "external.anchor"]
+    if anchors:
+        last = anchors[-1]
+        print(f"\nexternal anchors: {len(anchors)} (latest head {last['headHash'][:20]}... at {last['anchoredAt']})")
+        print("  publish these head hashes to an independent timestamp to freeze the corpus (D2).")
 
     print()
     if n_confirmatory == 0:
