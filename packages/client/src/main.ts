@@ -4,7 +4,10 @@ import { initRouter, type Route } from './router';
 import { renderHome } from './pages/home';
 import { renderAbout } from './pages/about';
 import { renderRun } from './pages/run';
-import { renderExperiments, renderLeaderboard, renderHistory } from './pages/stub';
+import { renderExperiments } from './pages/experiments';
+import { renderLeaderboard } from './pages/leaderboard';
+import { renderHistory } from './pages/history';
+import { renderVerify } from './pages/verify';
 
 const shell = buildShell();
 const app = document.getElementById('app');
@@ -18,6 +21,7 @@ const routes: Record<string, Route> = {
   '/experiments': renderExperiments,
   '/leaderboard': renderLeaderboard,
   '/history': renderHistory,
+  '/verify': renderVerify,
 };
 
 initRouter({

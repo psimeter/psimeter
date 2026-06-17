@@ -24,8 +24,13 @@ export function buildShell(): Shell {
   );
 
   const chip = el(
-    'span',
-    { class: 'identity-chip', title: 'Your pseudonymous operator key — kept only in this browser (spec D6)' },
+    'a',
+    {
+      class: 'identity-chip',
+      href: '/history',
+      'data-link': true,
+      title: 'Your sessions — tied to this browser key, kept only here (spec D6)',
+    },
     '…',
   );
 
@@ -59,6 +64,7 @@ export function buildShell(): Shell {
     for (const a of navLinks) {
       a.classList.toggle('active', a.getAttribute('data-path') === path);
     }
+    chip.classList.toggle('active', path === '/history');
   }
 
   return { root, outlet, setActive };

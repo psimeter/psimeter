@@ -5,6 +5,8 @@
 // WebSocket streams checkpoints and the final seal. The socket is receive-only —
 // nothing this client sends can reach the generator (pillar 5).
 
+import type { LedgerEntry, ExperimentDefinition, BeaconRef } from '@psymeter/core';
+
 export type Intention = 'HIGH' | 'LOW' | 'BASELINE';
 
 export interface EntropyGrade {
@@ -110,4 +112,101 @@ async function errorMessage(res: Response, fallback: string): Promise<string> {
   } catch {
     return fallback;
   }
+}
+
+// ---------- read APIs (browse / stats / history / verify) ----------
+
+export interface OpenPayload {
+  sessionId: string;
+  experimentId: string;
+  experimentVersion: number;
+  intention: Intention;
+  operatorPubKey: string;
+  operatorSig: string;
+  beacon: BeaconRef;
+  entropySource: { id: string; kind: string; confirmatory: boolean; metadata: unknown };
+  serverNonce: string;
+  precommit: string;
+  anchor: string;
+}
+
+export interface SealPayload {
+  sessionId: string;
+  openEntryHash: string;
+  outputCommitment: string;
+  rawSha256: string;
+  rawBlobRef: string;
+  leafBytes: number;
+  nSamples: number;
+  ones: number;
+}
+
+export interface SessionSummary {
+  sessionId: string;
+  experimentId: string;
+  experimentVersion: number;
+  intention: Intention;
+  operatorPubKey: string;
+  anchor: string;
+  beaconRound: number;
+  entropy: { id: string; confirmatory: boolean };
+  ts: string;
+  sealed: boolean;
+  ones: number | null;
+  nSamples: number | null;
+  zDisplay: number | null;
+}
+
+export interface IntentionStat { n: number; meanZ: number | null; }
+
+export interface ExperimentInfo {
+  id: string;
+  version: number;
+  title: string;
+  kind: string;
+  params: Record<string, unknown>;
+  intentions: Intention[];
+  stats: { sessions: number; sealed: number; byIntention: Record<Intention, number> };
+}
+
+export interface GlobalStats {
+  sessions: number;
+  sealed: number;
+  totalBits: number;
+  byIntention: Record<Intention, IntentionStat>;
+  anomalies: { z2: number; z3: number; expectedZ2: number; expectedZ3: number };
+  highMinusLow: number | null;
+  extremes: SessionSummary[];
+}
+
+export interface SessionDetail {
+  sessionId: string;
+  open: LedgerEntry;
+  seal: LedgerEntry | null;
+  experiment: ExperimentDefinition | null;
+}
+
+export async function fetchExperiments(): Promise<ExperimentInfo[]> {
+  const res = await fetch('/api/experiments');
+  if (!res.ok) throw new Error('could not load experiments');
+  return ((await res.json()) as { experiments: ExperimentInfo[] }).experiments;
+}
+
+export async function fetchStats(): Promise<GlobalStats> {
+  const res = await fetch('/api/stats');
+  if (!res.ok) throw new Error('could not load stats');
+  return (await res.json()) as GlobalStats;
+}
+
+export async function fetchSessions(operator?: string): Promise<SessionSummary[]> {
+  const query = operator ? `?operator=${encodeURIComponent(operator)}` : '';
+  const res = await fetch(`/api/sessions${query}`);
+  if (!res.ok) throw new Error('could not load sessions');
+  return ((await res.json()) as { sessions: SessionSummary[] }).sessions;
+}
+
+export async function fetchSessionDetail(id: string): Promise<SessionDetail> {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(id)}`);
+  if (!res.ok) throw new Error(await errorMessage(res, 'could not load session'));
+  return (await res.json()) as SessionDetail;
 }

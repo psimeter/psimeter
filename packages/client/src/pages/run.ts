@@ -213,7 +213,8 @@ export function renderRun(outlet: HTMLElement): Disposer {
         ]),
         el('div', { class: 'actions' }, [
           el('button', { class: 'btn primary', onclick: () => showSetup() }, 'Run another'),
-          el('a', { class: 'btn ghost', href: '/about', 'data-link': true }, 'How verification works'),
+          el('a', { class: 'btn ghost', href: `/verify?session=${seal.sessionId}`, 'data-link': true }, 'Verify in your browser'),
+          el('a', { class: 'btn ghost', href: '/about', 'data-link': true }, 'How it works'),
         ]),
       ]),
     );

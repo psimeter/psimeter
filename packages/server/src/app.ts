@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { EntropySource, Intention } from '@psymeter/core';
 import { LedgerStore } from './ledgerStore.js';
-import { loadExperiment } from './experiments.js';
+import { loadExperiment, listExperiments } from './experiments.js';
+import { LedgerReader, globalStats, experimentStat, type OpenPayload } from './ledgerReader.js';
 import { selectEntropySource } from './select.js';
 import { selectBeacon, type BeaconProvider } from './beacon.js';
 import { commitOpen, generateAndSeal, prepareSession, type SessionContext } from './session.js';
@@ -54,6 +55,7 @@ npm run dev:client     <span style="color:#5e6b7c"># Vite on :5173, proxies /api
 </body></html>`;
 
 const SIGN_ROUTE = /^\/api\/sessions\/([^/]+)\/sign$/;
+const SESSION_DETAIL_ROUTE = /^\/api\/sessions\/([^/]+)$/;
 
 /**
  * Build the PsyMeter HTTP + one-way WebSocket server (spec §8).
@@ -74,6 +76,7 @@ export function createApp(): http.Server {
   const entropy: EntropySource = selectEntropySource();
   const beaconProvider = selectBeacon();
   const sessions = new Map<string, SessionContext>();
+  const reader = new LedgerReader(ledgerPath);
 
   // eslint-disable-next-line no-console
   console.log(
@@ -87,16 +90,38 @@ export function createApp(): http.Server {
   );
 
   const server = http.createServer((req, res) => {
-    if (req.method === 'POST' && req.url === '/api/sessions') {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const path = url.pathname;
+
+    if (req.method === 'POST' && path === '/api/sessions') {
       void handleCreateSession(req, res, store, entropy, beaconProvider, sessions);
       return;
     }
-    const signMatch = req.method === 'POST' ? req.url?.match(SIGN_ROUTE) : null;
+    const signMatch = req.method === 'POST' ? path.match(SIGN_ROUTE) : null;
     if (signMatch) {
       void handleSign(req, res, signMatch[1]!, store, sessions);
       return;
     }
-    if (req.url?.startsWith('/api/')) {
+    if (req.method === 'GET') {
+      if (path === '/api/experiments') {
+        handleExperiments(res, reader);
+        return;
+      }
+      if (path === '/api/stats') {
+        sendJson(res, 200, globalStats(reader.summaries()));
+        return;
+      }
+      const detailMatch = path.match(SESSION_DETAIL_ROUTE);
+      if (detailMatch) {
+        handleSessionDetail(res, reader, detailMatch[1]!);
+        return;
+      }
+      if (path === '/api/sessions') {
+        handleSessionList(res, reader, url.searchParams);
+        return;
+      }
+    }
+    if (path.startsWith('/api/')) {
       res.writeHead(404).end('not found');
       return;
     }
@@ -192,6 +217,45 @@ async function handleSign(
   } catch (err) {
     sendJson(res, 400, { error: String(err) });
   }
+}
+
+function handleExperiments(res: http.ServerResponse, reader: LedgerReader): void {
+  const rows = reader.summaries();
+  const experiments = listExperiments().map((d) => ({
+    id: d.id,
+    version: d.version,
+    title: d.title,
+    kind: d.kind,
+    params: d.params,
+    intentions: d.intentions,
+    stats: experimentStat(rows, d.id),
+  }));
+  sendJson(res, 200, { experiments });
+}
+
+function handleSessionList(res: http.ServerResponse, reader: LedgerReader, params: URLSearchParams): void {
+  const operator = params.get('operator');
+  let rows = reader.summaries();
+  if (operator) rows = rows.filter((r) => r.operatorPubKey === operator);
+  const limit = Math.min(Math.max(Number(params.get('limit')) || 200, 1), 1000);
+  rows = rows.slice().reverse().slice(0, limit); // most recent first
+  sendJson(res, 200, { sessions: rows });
+}
+
+function handleSessionDetail(res: http.ServerResponse, reader: LedgerReader, id: string): void {
+  const detail = reader.detail(id);
+  if (!detail) {
+    sendJson(res, 404, { error: 'unknown session' });
+    return;
+  }
+  const open = detail.open.payload as OpenPayload;
+  let experiment: unknown = null;
+  try {
+    experiment = loadExperiment(open.experimentId, open.experimentVersion);
+  } catch {
+    experiment = null; // definition file unavailable; the chain is still verifiable
+  }
+  sendJson(res, 200, { sessionId: id, open: detail.open, seal: detail.seal, experiment });
 }
 
 function handleStream(
