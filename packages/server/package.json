@@ -12,6 +12,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@noble/curves": "^1.6.0",
     "@psymeter/core": "*",
     "ws": "^8.16.0"
   },

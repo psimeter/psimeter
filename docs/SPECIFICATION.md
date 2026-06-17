@@ -120,7 +120,7 @@ Each item: the question, options, my recommendation, and status. **OPEN** items 
 Make the experimenter un-trustable-away:
 - **Commit–reveal:** before a run, publish `precommit = H(experimentId ‖ version ‖ experimentHash ‖ intention ‖ operator_pubkey ‖ beacon ‖ session_id ‖ nonce ‖ prev_head)` — the exact parameter set is bound via `experimentHash` (D13). The **anchor** is derived from this. After the run, reveal the inputs; anyone verifies.
 - **Streaming commitment to raw output:** because a true RNG cannot be reproduced from a seed, the raw stream is committed *as it is produced* (rolling/Merkle root) so it cannot be altered or cherry-picked after the fact. (This replaces "commit the seed" for the physical-source case.)
-- **Public beacon:** bind each run to a beacon value (NIST / drand) so the record provably did not exist before the run started — prevents pre-computation / selective generation by the server.
+- **Public beacon:** bind each run to a beacon value (NIST / drand) so the record provably did not exist before the run started — prevents pre-computation / selective generation by the server. *Beacon choice (2026-06-17):* drand **quicknet** (unchained, 3 s, League of Entropy), each pulse **BLS-verified in-process** against the hardcoded group public key before it is bound — the server never trusts the drand endpoint for authenticity. Switched from the older chained mainnet (free now: no confirmatory data exists yet) because unchained verification is simpler — the signed message is `H(round)`, with no previous-signature dependency.
 - **Hash-chained append-only log:** each session record includes the hash of the previous → tamper-evident ledger.
 - **External anchoring:** periodically publish the ledger head to an independent, hard-to-forge timestamp (RFC 3161 TSA, a public git repo, and/or OpenTimestamps/Bitcoin) so the whole corpus is frozen in time.
 
@@ -244,17 +244,19 @@ The choice must be committed *before* the target exists. Sequence: operator comm
 ### 7.6 Implementation status (Phase 1)
 Built and verified end-to-end (TypeScript server + independent Python re-verification):
 - Operator **Ed25519 signing** of the pre-commitment before the `session.open` is logged (D6).
-- Live **drand** beacon bound into every session (freshness / anti-precomputation).
+- Live **drand quicknet** beacon, **BLS-verified in-process** against the hardcoded group key, bound into every session (freshness / anti-precomputation).
 - One-way generation with a **streaming Merkle commitment**.
 - **Raw stream persisted**, content-addressed by SHA-256, re-verified against *both* the flat hash and the Merkle root.
 - **Hash-chained** append-only ledger; integrity re-derived in Python.
-- **External-anchor receipts** (`npm run anchor`) ready to publish.
+- **Automated external anchoring** (`npm run anchor`): an OpenTimestamps `.ots` proof of the ledger head, plus a publishable receipt.
 
-Residual hardening before confirmatory data collection (tracked, not yet done):
-- In-process **BLS verification** of the drand signature (today the round is recorded for independent re-fetch; the server trusts the drand endpoint at fetch time).
-- **Ed25519 signature verification inside `analyze.py`** (optional `cryptography` dependency; the chain and blobs are already verified with the standard library only).
-- **Vendor** the client's dependencies — *done:* the Vite build bundles `@noble/ed25519`, `three`, and `@noble/hashes` from npm (pinned in `package-lock`), so nothing loads from a CDN at runtime. Remaining sub-item: **subresource-integrity** on the emitted bundle.
-- **Automated** external-anchor submission to a TSA / OpenTimestamps (today the receipt is produced and published manually).
+Residual hardening — completed in Phase 2:
+- **In-process BLS verification** of the beacon: the server now binds drand **quicknet** (unchained) and verifies each pulse's BLS signature against the hardcoded group public key (the trust anchor) before binding it, so it never trusts the drand endpoint for authenticity. (Switched from the older chained mainnet — see the D2 note.)
+- **Ed25519 + pre-commitment verification inside `analyze.py`**: recomputes each pre-commitment and anchor with the standard library, and verifies the operator's Ed25519 signature when the optional `cryptography` package is present — the same checks the browser `/verify` performs.
+- **Subresource-integrity** on the emitted bundle: a post-build step pins every bundled asset by sha384, so the browser rejects a tampered or swapped script/style. With the npm-bundled deps, the esm.sh CDN gap is fully closed.
+- **Automated external anchoring**: `npm run anchor` submits the ledger head to OpenTimestamps and writes a standard detached `.ots` proof to upgrade/verify later (Bitcoin-anchored, no account, no cost).
+
+Remaining (Phase 3):
 - **Live witnesses** to fully close the residual "parallel-runs" attack (§7.4).
 
 ---
@@ -388,4 +390,4 @@ One-way isolation (pillar 5) is unchanged. The anchor is the signed pre-commitme
 ### Phase 2 build status
 - **Client framework `DECIDED`:** **TypeScript + Vite, no UI framework** (hand-rolled DOM components + a History-API router), chosen for the smallest auditable dependency surface and a pinned, bundled build. Dependencies (`three`, `@noble/ed25519`) are now bundled from npm instead of the esm.sh CDN, retiring that supply-chain risk from §7.6. The Node server serves the built assets with SPA fallback; `npm run dev:client` gives a hot-reload dev server that proxies `/api` to the instrument.
 - **Built & verified** (branch `phase2-public-site`): the **gamified experiment UI** (`/run`) — anchor large and central as the concentration target, live three.js cumulative-deviation feedback, countdown/HUD, and an honest seal summary that states a single session is not evidence (D4/D13); the **About / how-it-works** explainer (`/about`); the **experiments browser**, the **leaderboard/aggregate** view (honest — anomaly counts shown against the counts chance alone predicts, D4), and the per-operator **history** page, all driven by new server **read APIs** over the ledger (`GET /api/experiments`, `/api/stats`, `/api/sessions`, `/api/sessions/:id`); and **in-browser verification** (`/verify`) that recomputes the pre-commitment + anchor and checks the operator's Ed25519 signature entirely client-side. The last is made possible by refactoring `core`'s hashing from `node:crypto` to pure-JS **`@noble/hashes`** — byte-identical output, so cross-language parity with `analyze.py` is preserved (the core unit tests, incl. the SHA-256 vector, still pass).
-- **Still open:** **subresource-integrity** on the emitted bundle; the **two-color precognition** experiment (§7.5); and the remaining §7.6 residual-hardening items (in-process BLS verification of drand, Ed25519 verification inside `analyze.py`, automated external anchoring, live witnesses).
+- **Still open:** the **two-color precognition** experiment (§7.5); and **live witnesses** (§7.4) to close the residual parallel-runs attack — both Phase 3. (SRI, in-process BLS verification of the drand quicknet beacon, Ed25519 + pre-commitment verification in `analyze.py`, and automated OpenTimestamps anchoring all landed in this pass.)

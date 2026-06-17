@@ -12,6 +12,7 @@ __pycache__/
 # local dev ledger output (regenerated; not the published dataset)
 ledger/*.jsonl
 ledger/blobs/
+ledger/anchors/
 
 # misc
 *.log

@@ -95,6 +95,93 @@ def merkle_root(leaves: list[bytes]) -> str:
     return "sha256:" + level[0].hex()
 
 
+# ---- operator pre-commitment verification (mirrors packages/core + browser /verify) ----
+
+EXPERIMENTS_DIR = Path(__file__).resolve().parent.parent / "experiments"
+_CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"  # base32, no I/L/O/U
+
+try:
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+    _HAVE_ED25519 = True
+except ImportError:  # stdlib-only fallback: chain, precommits, anchors, blobs still verified
+    _HAVE_ED25519 = False
+
+
+def experiment_hash(defn: dict) -> str:
+    return sha256_str(canonicalize(defn))
+
+
+def anchor_from_hash(prefixed: str) -> str:
+    """Mirror of anchorFromHash in packages/core/src/commitment.ts (first 60 bits)."""
+    hex15 = prefixed.split(":", 1)[1][:15]
+    bits = "".join(f"{int(c, 16):04b}" for c in hex15)
+    enc = "".join(_CROCKFORD[int(bits[i : i + 5], 2)] for i in range(0, 60, 5))
+    return f"{enc[:4]}-{enc[4:8]}-{enc[8:12]}"
+
+
+def recompute_precommit(open_entry: dict, defn: dict) -> str:
+    """Rebuild the pre-commitment from the revealed fields (mirror of buildPrecommit)."""
+    p = open_entry["payload"]
+    return sha256_str(
+        canonicalize(
+            {
+                "experimentId": p["experimentId"],
+                "experimentVersion": p["experimentVersion"],
+                "experimentHash": experiment_hash(defn),
+                "intention": p["intention"],
+                "operatorPubKey": p["operatorPubKey"],
+                "beacon": p["beacon"],
+                "sessionId": p["sessionId"],
+                "serverNonce": p["serverNonce"],
+                "prevHash": open_entry["prevHash"],
+            }
+        )
+    )
+
+
+def verify_operator_sig(pubkey: str, precommit: str, sig: str):
+    """True/False when 'cryptography' is installed; None when it is not (skipped)."""
+    if not _HAVE_ED25519:
+        return None
+    try:
+        key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(pubkey.split(":", 1)[1]))
+        key.verify(bytes.fromhex(sig.split(":", 1)[1]), precommit.encode("utf-8"))
+        return True
+    except (InvalidSignature, ValueError):
+        return False
+
+
+def load_experiment_def(eid: str, version: int):
+    path = EXPERIMENTS_DIR / f"{eid}-v{version}.json"
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def verify_commitments(open_entries: dict) -> None:
+    """Recompute each pre-commitment + anchor (stdlib) and, if 'cryptography' is
+    available, verify the operator's Ed25519 signature. This is the same check the
+    browser /verify view performs — independent of the TypeScript collector."""
+    if not open_entries:
+        return
+    print("operator commitments (recomputed independently):")
+    for sid, oe in open_entries.items():
+        p = oe["payload"]
+        defn = load_experiment_def(p["experimentId"], p["experimentVersion"])
+        if defn is None:
+            print(f"  {sid[:8]}  SKIP (no definition {p['experimentId']}-v{p['experimentVersion']})")
+            continue
+        pre_ok = recompute_precommit(oe, defn) == p["precommit"]
+        anc_ok = anchor_from_hash(p["precommit"]) == p["anchor"]
+        sig = verify_operator_sig(p["operatorPubKey"], p["precommit"], p["operatorSig"])
+        sig_txt = {True: "sig ok", False: "sig BAD", None: "sig -"}[sig]
+        print(f"  {sid[:8]}  precommit {'ok' if pre_ok else 'BAD'}  anchor {'ok' if anc_ok else 'BAD'}  {sig_txt}")
+    if not _HAVE_ED25519:
+        print("  (install 'cryptography' to also verify Ed25519 operator signatures;")
+        print("   the chain, pre-commitments, anchors and blobs are verified with the stdlib alone)")
+    print()
+
+
 def main(path: str) -> int:
     entries = [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
     print(f"ledger entries: {len(entries)}")
@@ -105,8 +192,10 @@ def main(path: str) -> int:
         return 1
     print("chain integrity: OK (re-derived independently in Python)\n")
 
-    opens = {e["payload"]["sessionId"]: e["payload"] for e in entries if e["type"] == "session.open"}
+    opens = {e["payload"]["sessionId"]: e for e in entries if e["type"] == "session.open"}
     seals = [e["payload"] for e in entries if e["type"] == "session.seal"]
+
+    verify_commitments(opens)
 
     print(f"{'session':10}{'intent':9}{'source':9}{'ones / N':>16}{'z':>9}{'dir-z':>8}{'p(1-tail)':>11}")
     print("-" * 72)
@@ -114,7 +203,8 @@ def main(path: str) -> int:
     directional: list[float] = []
     n_confirmatory = 0
     for s in seals:
-        op = opens.get(s["sessionId"], {})
+        oe = opens.get(s["sessionId"])
+        op = oe["payload"] if oe else {}
         intent = op.get("intention", "?")
         src = op.get("entropySource", {})
         srcid, conf = src.get("id", "?"), src.get("confirmatory", False)
