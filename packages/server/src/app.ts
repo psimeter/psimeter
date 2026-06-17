@@ -7,12 +7,15 @@ import type { BeaconRef, EntropySource, Intention } from '@psymeter/core';
 import { LedgerStore } from './ledgerStore.js';
 import { loadExperiment } from './experiments.js';
 import { selectEntropySource } from './select.js';
-import { generateAndSeal, openSession, type SessionContext } from './session.js';
+import { commitOpen, generateAndSeal, prepareSession, type SessionContext } from './session.js';
+import { verifyEd25519 } from './sign.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
 const clientDir = resolve(repoRoot, 'packages/client');
-const ledgerPath = resolve(repoRoot, 'ledger/dev.jsonl');
+// Relative PSYMETER_LEDGER values resolve against the repo root; absolute paths
+// are honored as-is. Lets each experiment campaign keep its own ledger file.
+const ledgerPath = resolve(repoRoot, process.env.PSYMETER_LEDGER ?? 'ledger/dev.jsonl');
 
 /** Pacing is FAST (no inter-checkpoint delay) for tests; off in normal use. */
 const FAST = process.env.PSYMETER_FAST === '1';
@@ -25,15 +28,20 @@ const CONTENT_TYPES: Record<string, string> = {
   '.ico': 'image/x-icon',
 };
 
+const SIGN_ROUTE = /^\/api\/sessions\/([^/]+)\/sign$/;
+
 /**
  * Build the PsyMeter HTTP + one-way WebSocket server (spec §8).
  *
- * - `POST /api/sessions` declares the experiment + intention and performs the
- *   pre-commitment (Phase A). This is the ONLY client→server influence, and it
- *   happens before any randomness exists.
- * - `WS /api/stream?session=ID` streams checkpoints (Phase B) then the seal
- *   (Phase C). The server reads NOTHING from this socket — it is one-way.
- * - Everything else serves the static client.
+ * Handshake (spec §7.2):
+ *   1. `POST /api/sessions` declares experiment + intention + operator key and
+ *      returns the pre-commitment + anchor (Phase A, part 1). Nothing is logged
+ *      yet and no randomness exists.
+ *   2. `POST /api/sessions/:id/sign` submits the operator's Ed25519 signature
+ *      over the pre-commitment; the server verifies it and only then logs the
+ *      immutable `session.open` entry (Phase A, part 2).
+ *   3. `WS /api/stream?session=ID` streams checkpoints (Phase B) then the seal
+ *      (Phase C). The server reads NOTHING from this socket — it is one-way.
  */
 export function createApp(): http.Server {
   const store = new LedgerStore(ledgerPath);
@@ -44,12 +52,17 @@ export function createApp(): http.Server {
   // eslint-disable-next-line no-console
   console.log(
     `[entropy] using "${entropy.id}" (${entropy.kind}), confirmatory=${entropy.confirmatory}` +
-      (entropy.confirmatory ? '' : '  — NON-CONFIRMATORY: pipeline/pilot only, not scientific data'),
+      (entropy.confirmatory ? '' : '  - NON-CONFIRMATORY: pipeline/pilot only, not scientific data'),
   );
 
   const server = http.createServer((req, res) => {
     if (req.method === 'POST' && req.url === '/api/sessions') {
       void handleCreateSession(req, res, store, entropy, sessions);
+      return;
+    }
+    const signMatch = req.method === 'POST' ? req.url?.match(SIGN_ROUTE) : null;
+    if (signMatch) {
+      void handleSign(req, res, signMatch[1]!, store, sessions);
       return;
     }
     if (req.url?.startsWith('/api/')) {
@@ -87,6 +100,10 @@ async function handleCreateSession(
       intention?: Intention;
       operatorPubKey?: string;
     };
+    if (!body.operatorPubKey) {
+      sendJson(res, 400, { error: 'operatorPubKey required (operator identity, D6)' });
+      return;
+    }
     const experiment = loadExperiment(body.experimentId ?? 'binary-micropk', body.version ?? 1);
     const intention = body.intention ?? 'HIGH';
     if (!experiment.intentions.includes(intention)) {
@@ -96,22 +113,50 @@ async function handleCreateSession(
 
     // TODO(beacon): replace this dev placeholder with a live drand/NIST pulse.
     const beacon: BeaconRef = { source: 'dev', round: 0, value: '00' };
-    // TODO(D6): the operator's pseudonymous key arrives from the client and signs the precommit.
-    const operatorPubKey = body.operatorPubKey ?? 'ed25519:UNSIGNED';
 
-    const ctx = openSession(store, { experiment, intention, operatorPubKey, beacon, source: entropy });
+    const ctx = prepareSession(store, { experiment, intention, operatorPubKey: body.operatorPubKey, beacon, source: entropy });
     sessions.set(ctx.sessionId, ctx);
 
     sendJson(res, 200, {
       sessionId: ctx.sessionId,
-      anchor: ctx.anchor,
       precommit: ctx.precommit,
+      anchor: ctx.anchor,
       experiment: { id: experiment.id, version: experiment.version, title: experiment.title },
       params: ctx.params,
       intention,
       entropy: { id: entropy.id, kind: entropy.kind, confirmatory: entropy.confirmatory },
+      signPath: `/api/sessions/${ctx.sessionId}/sign`,
       wsPath: `/api/stream?session=${ctx.sessionId}`,
     });
+  } catch (err) {
+    sendJson(res, 400, { error: String(err) });
+  }
+}
+
+async function handleSign(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  id: string,
+  store: LedgerStore,
+  sessions: Map<string, SessionContext>,
+): Promise<void> {
+  try {
+    const ctx = sessions.get(id);
+    if (!ctx) {
+      sendJson(res, 404, { error: 'unknown session' });
+      return;
+    }
+    if (ctx.open) {
+      sendJson(res, 409, { error: 'session already signed' });
+      return;
+    }
+    const body = JSON.parse(await readBody(req)) as { operatorSig?: string };
+    if (!body.operatorSig || !verifyEd25519(ctx.operatorPubKey, ctx.precommit, body.operatorSig)) {
+      sendJson(res, 400, { error: 'invalid operator signature' });
+      return;
+    }
+    const open = commitOpen(store, ctx, body.operatorSig);
+    sendJson(res, 200, { ok: true, openEntryHash: open.entryHash });
   } catch (err) {
     sendJson(res, 400, { error: String(err) });
   }
@@ -124,8 +169,8 @@ function handleStream(
   sessions: Map<string, SessionContext>,
 ): void {
   const ctx = sessions.get(id);
-  if (!ctx || ctx.started) {
-    ws.send(JSON.stringify({ type: 'error', message: 'invalid or already-started session' }));
+  if (!ctx || !ctx.open || ctx.started) {
+    ws.send(JSON.stringify({ type: 'error', message: 'session not found, unsigned, or already started' }));
     ws.close();
     return;
   }
@@ -153,7 +198,7 @@ function handleStream(
         ones: payload.ones,
         nSamples: payload.nSamples,
         outputCommitment: payload.outputCommitment,
-        openEntryHash: ctx.open.entryHash,
+        openEntryHash: ctx.open!.entryHash,
         sealEntryHash: seal.entryHash,
       });
     })
