@@ -1,17 +1,19 @@
-"""PsyMeter analysis pipeline (Phase 1 skeleton).
+"""PsyMeter analysis pipeline (Phase 1).
 
-Authoritative statistics are computed HERE, in Python, over the published raw
-ledger — never trusting the live server (spec §8.1). This starter script:
+Authoritative statistics are computed HERE, in Python, over the *published*
+ledger - never trusting the live server (spec §8.1). This script:
 
-  1. Re-verifies the ledger hash-chain INDEPENDENTLY of the TypeScript
-     implementation. The canonical form below must match
-     packages/core/src/canonicalize.ts byte-for-byte; reproducing a matching
-     `entryHash` is the cross-language reproducibility check (pillar 4).
-  2. Recomputes per-session z-scores and the Stouffer-combined z.
+  1. Re-verifies the ledger hash-chain INDEPENDENTLY of the TypeScript collector.
+     The canonical form below must match packages/core/src/canonicalize.ts
+     byte-for-byte; re-deriving a matching `entryHash` is the cross-language
+     reproducibility check (pillar 4).
+  2. Joins each `session.seal` to its `session.open` to recover the declared
+     intention, then reports per-session and intention-aware aggregates
+     (the directional HIGH/LOW effect, Stouffer-combined).
 
-The core checks use only the Python standard library, so they run with no
-dependencies. numpy / scipy (requirements.txt) are reserved for the richer
-analyses to come (calibrated null, variance/tail tests, per-operator reliability).
+Uses only the Python standard library, so anyone can re-run it with a bare
+install. EXPLORATORY by construction - this is not the pre-registered
+confirmatory test (spec §5, D3).
 """
 
 from __future__ import annotations
@@ -50,27 +52,16 @@ def sha256_str(s: str) -> str:
 def entry_hash(e: dict) -> str:
     return sha256_str(
         canonicalize(
-            {
-                "seq": e["seq"],
-                "ts": e["ts"],
-                "prevHash": e["prevHash"],
-                "type": e["type"],
-                "payload": e["payload"],
-            }
+            {"seq": e["seq"], "ts": e["ts"], "prevHash": e["prevHash"], "type": e["type"], "payload": e["payload"]}
         )
     )
 
 
 def verify_chain(entries: list[dict]) -> int:
-    """Return the index of the first bad entry, or -1 if the chain is intact."""
     for i, e in enumerate(entries):
         expected_seq = 0 if i == 0 else entries[i - 1]["seq"] + 1
         expected_prev = GENESIS_PREV if i == 0 else entries[i - 1]["entryHash"]
-        if e["seq"] != expected_seq:
-            return i
-        if e["prevHash"] != expected_prev:
-            return i
-        if entry_hash(e) != e["entryHash"]:
+        if e["seq"] != expected_seq or e["prevHash"] != expected_prev or entry_hash(e) != e["entryHash"]:
             return i
     return -1
 
@@ -79,8 +70,13 @@ def session_z(ones: int, n: int) -> float:
     return (ones - n * 0.5) / math.sqrt(n * 0.25)
 
 
-def two_sided_p(z: float) -> float:
-    return math.erfc(abs(z) / math.sqrt(2))
+def phi(z: float) -> float:
+    """Standard-normal CDF."""
+    return 0.5 * math.erfc(-z / math.sqrt(2))
+
+
+def stouffer(zs: list[float]) -> float:
+    return sum(zs) / math.sqrt(len(zs))
 
 
 def main(path: str) -> int:
@@ -91,27 +87,51 @@ def main(path: str) -> int:
     if bad >= 0:
         print(f"chain integrity: BROKEN at index {bad}")
         return 1
-    print("chain integrity: OK (re-derived independently in Python)")
+    print("chain integrity: OK (re-derived independently in Python)\n")
 
-    zs: list[float] = []
-    for e in entries:
-        if e["type"] == "session.seal":
-            p = e["payload"]
-            z = session_z(p["ones"], p["nSamples"])
-            zs.append(z)
-            print(
-                f"  session {p['sessionId'][:8]}  ones={p['ones']}/{p['nSamples']}  "
-                f"z={z:+.3f}  p={two_sided_p(z):.3f}"
-            )
+    opens = {e["payload"]["sessionId"]: e["payload"] for e in entries if e["type"] == "session.open"}
+    seals = [e["payload"] for e in entries if e["type"] == "session.seal"]
 
-    if zs:
-        combined = sum(zs) / math.sqrt(len(zs))
-        print(f"Stouffer combined z over {len(zs)} session(s): {combined:+.3f}  (p={two_sided_p(combined):.3f})")
-    else:
-        print("no sealed sessions found")
+    print(f"{'session':10}{'intent':9}{'source':9}{'ones / N':>16}{'z':>9}{'dir-z':>8}{'p(1-tail)':>11}")
+    print("-" * 72)
+    by_intent: dict[str, list[float]] = {"HIGH": [], "LOW": [], "BASELINE": []}
+    directional: list[float] = []
+    n_confirmatory = 0
+    for s in seals:
+        op = opens.get(s["sessionId"], {})
+        intent = op.get("intention", "?")
+        src = op.get("entropySource", {})
+        srcid, conf = src.get("id", "?"), src.get("confirmatory", False)
+        n_confirmatory += 1 if conf else 0
+        z = session_z(s["ones"], s["nSamples"])
+        dirz = z if intent == "HIGH" else (-z if intent == "LOW" else None)
+        if intent in by_intent:
+            by_intent[intent].append(z)
+        p1 = "" if dirz is None else f"{1 - phi(dirz):.3f}"
+        dz = "" if dirz is None else f"{dirz:+.2f}"
+        if dirz is not None:
+            directional.append(dirz)
+        print(f"{s['sessionId'][:8]:10}{intent:9}{srcid:9}{s['ones']:>8}/{s['nSamples']:<7}{z:>+9.3f}{dz:>8}{p1:>11}")
+
+    dangling = [sid for sid in opens if sid not in {s["sessionId"] for s in seals}]
+    if dangling:
+        print(f"\n({len(dangling)} open session(s) with no seal - abandoned/in-progress, not scored)")
+
+    print("\naggregates (EXPLORATORY - not the pre-registered confirmatory test):")
+    for intent in ("HIGH", "LOW"):
+        zs = by_intent[intent]
+        if zs:
+            print(f"  {intent:9} n={len(zs):<3} Stouffer z = {stouffer(zs):+.3f}")
+    if directional:
+        dz = stouffer(directional)
+        print(f"  intended-direction (HIGH & LOW)  n={len(directional):<3} z = {dz:+.3f}  one-tailed p = {1 - phi(dz):.3f}")
+
+    print()
+    if n_confirmatory == 0:
+        print("NOTE: 0 confirmatory-grade sessions - all data here is pilot/plumbing (spec D1). Not publishable evidence.")
+    print("A single session has ~no power (spec D13); only large, pre-registered aggregates can decide H1/H2.")
     return 0
 
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "ledger/dev.jsonl"
-    sys.exit(main(target))
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "ledger/dev.jsonl"))
