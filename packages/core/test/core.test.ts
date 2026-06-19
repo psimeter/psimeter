@@ -14,6 +14,8 @@ import {
   sessionZ,
   hitRateZ,
   displayZFromSeal,
+  derivePrecogTarget,
+  trialCommit,
   stoufferZ,
   type ExperimentDefinition,
   type PrecommitInput,
@@ -170,4 +172,26 @@ test('commitHash equals sha256 of the canonical form and is order-independent', 
   const v = { sessionId: 's1', trialIndex: 0, choice: 'A', targetRound: 42 };
   assert.equal(commitHash(v), sha256(canonicalize(v)));
   assert.equal(commitHash({ b: 1, a: 2 }), commitHash({ a: 2, b: 1 }));
+});
+
+// ---------- precognition target derivation (spec §7.5) ----------
+test('derivePrecogTarget is deterministic, in range, and matches Python parity vectors', () => {
+  const B = 'deadbeef'.repeat(8);
+  // Frozen vectors — analysis/analyze.py must reproduce these exactly.
+  assert.deepEqual([0, 1, 2, 3].map((i) => derivePrecogTarget(B, i, 2)), [1, 1, 0, 0]);
+  assert.deepEqual([0, 1, 2, 3].map((i) => derivePrecogTarget(B, i, 3)), [1, 2, 0, 2]);
+  // In range for any k, and stable across calls.
+  for (let k = 2; k <= 7; k++) {
+    const t = derivePrecogTarget(B, 11, k);
+    assert.ok(t >= 0 && t < k && Number.isInteger(t));
+    assert.equal(t, derivePrecogTarget(B, 11, k));
+  }
+  assert.throws(() => derivePrecogTarget(B, 0, 1));
+});
+
+test('trialCommit matches the frozen golden vector (cross-language parity)', () => {
+  assert.equal(
+    trialCommit({ sessionId: 's1', trialIndex: 0, choice: 'A', targetRound: 100, prevBeaconRound: 98, operatorPubKey: 'ed25519:abc' }),
+    'sha256:6ecdfac93181f0112e2654a3cec7c7cb65fc700318937a4350824d649f7d2e81',
+  );
 });

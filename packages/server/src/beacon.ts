@@ -11,7 +11,20 @@ import type { BeaconRef } from '@psymeter/core';
  */
 export interface BeaconProvider {
   readonly id: string;
+  /** The latest published pulse (freshness anchor for a session pre-commitment). */
   fetchPulse(): Promise<BeaconRef>;
+  /** A specific round's pulse — throws if it has not been published yet. Used by
+   * precognition to resolve a *future* round bound at choice time (spec §7.5). */
+  fetchRound(round: number): Promise<BeaconRef>;
+  /** Block until `round` is published (or a timeout), then return it. */
+  waitForRound(round: number): Promise<BeaconRef>;
+  /** Nominal seconds between rounds — lets a runner translate a round offset into
+   * an approximate wait, and is non-confirmatory metadata only. */
+  readonly periodSeconds: number;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 // drand quicknet (League of Entropy): unchained, 3 s period, short G1 signatures.
@@ -29,11 +42,41 @@ const QUICKNET_URL = `https://api.drand.sh/${QUICKNET_CHAIN}/public/latest`;
 /** Real drand quicknet pulse, BLS-verified before it is bound into a session. */
 export class DrandBeacon implements BeaconProvider {
   readonly id = 'drand';
+  readonly periodSeconds = 3; // quicknet period
 
   async fetchPulse(): Promise<BeaconRef> {
-    const res = await fetch(QUICKNET_URL, { signal: AbortSignal.timeout(5000) });
+    return this.toRef(await this.fetchJson(QUICKNET_URL));
+  }
+
+  async fetchRound(round: number): Promise<BeaconRef> {
+    const url = `https://api.drand.sh/${QUICKNET_CHAIN}/public/${round}`;
+    return this.toRef(await this.fetchJson(url));
+  }
+
+  /**
+   * Poll until `round` is published. drand returns a non-2xx for a round that
+   * does not exist yet, which we treat as "not published" and retry. The target
+   * is bound BEFORE this resolves, so waiting cannot leak it (spec §7.5).
+   */
+  async waitForRound(round: number): Promise<BeaconRef> {
+    const deadlineMs = Date.now() + (this.periodSeconds * 1000 * 4 + 30_000);
+    for (;;) {
+      try {
+        return await this.fetchRound(round);
+      } catch (e) {
+        if (Date.now() > deadlineMs) throw new Error(`timeout waiting for drand round ${round}: ${String(e)}`);
+        await sleep(1000);
+      }
+    }
+  }
+
+  private async fetchJson(url: string): Promise<{ round: number; randomness: string; signature: string }> {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`drand fetch failed: HTTP ${res.status}`);
-    const p = (await res.json()) as { round: number; randomness: string; signature: string };
+    return (await res.json()) as { round: number; randomness: string; signature: string };
+  }
+
+  private toRef(p: { round: number; randomness: string; signature: string }): BeaconRef {
     if (!verifyQuicknetPulse(p.round, p.signature)) {
       throw new Error(`drand pulse ${p.round} failed BLS verification — refusing to bind an unverified beacon`);
     }
@@ -75,14 +118,49 @@ function hexToBytes(hex: string): Uint8Array {
 }
 
 /**
- * Offline placeholder beacon. NON-CONFIRMATORY: it provides no freshness
+ * Offline placeholder beacon. NON-CONFIRMATORY: it provides no real freshness
  * guarantee, so it must never back scientific data. Development/offline only.
+ *
+ * It simulates an advancing round clock so the precognition flow (which binds a
+ * *future* round and waits for it) is testable without network access: round =
+ * floor((now − genesis) / period), and each round's value is a deterministic
+ * hash of its number (so /verify and analyze.py can reproduce derived targets).
  */
 export class DevBeacon implements BeaconProvider {
   readonly id = 'dev';
+  readonly periodSeconds: number;
+  private readonly periodMs: number;
+  private readonly genesisMs = Date.now();
+
+  constructor() {
+    // Fast rounds under PSYMETER_FAST so a full precog session runs in seconds.
+    this.periodMs = process.env.PSYMETER_FAST === '1' ? 200 : 1000;
+    this.periodSeconds = this.periodMs / 1000;
+  }
+
+  private currentRound(): number {
+    return Math.floor((Date.now() - this.genesisMs) / this.periodMs);
+  }
+
+  private ref(round: number): BeaconRef {
+    const value = createHash('sha256').update(`dev-beacon:${round}`).digest('hex');
+    return { source: 'dev', round, value };
+  }
 
   async fetchPulse(): Promise<BeaconRef> {
-    return { source: 'dev', round: 0, value: '00' };
+    return this.ref(this.currentRound());
+  }
+
+  async fetchRound(round: number): Promise<BeaconRef> {
+    if (round > this.currentRound()) throw new Error(`dev round ${round} not yet published`);
+    return this.ref(round);
+  }
+
+  async waitForRound(round: number): Promise<BeaconRef> {
+    const publishAtMs = this.genesisMs + round * this.periodMs;
+    const waitMs = publishAtMs - Date.now();
+    if (waitMs > 0) await sleep(waitMs + 5);
+    return this.ref(round);
   }
 }
 

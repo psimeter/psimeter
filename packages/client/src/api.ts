@@ -122,6 +122,78 @@ async function errorMessage(res: Response, fallback: string): Promise<string> {
   }
 }
 
+// ---------- precognition (presentiment) two-way stream (spec §7.5) ----------
+
+export interface PrecogStarted { type: 'started'; trialsPerSession: number; optionsPerTrial: number; sessionSeconds: number; beaconSource: string; }
+export interface PrecogTrial { type: 'trial'; trialIndex: number; }
+export interface PrecogPending { type: 'pending'; trialIndex: number; targetRound: number; prevBeaconRound: number; }
+export interface PrecogReveal {
+  type: 'reveal';
+  trialIndex: number;
+  choice: Choice;
+  target: number;
+  targetChoice: Choice;
+  hit: number;
+  beaconRound: number;
+  beaconValue: string;
+  hits: number;
+  completed: number;
+  trialsPerSession: number;
+}
+export interface PrecogSeal {
+  type: 'seal';
+  sessionId: string;
+  anchor: string;
+  hits: number;
+  trials: number;
+  optionsPerTrial: number;
+  outputCommitment: string;
+  rawBlobRef: string;
+  openEntryHash: string;
+  sealEntryHash: string;
+}
+export type PrecogMessage = PrecogStarted | PrecogTrial | PrecogPending | PrecogReveal | PrecogSeal | StreamError;
+
+export interface PrecogHandlers {
+  onStarted?: (m: PrecogStarted) => void;
+  onTrial?: (m: PrecogTrial) => void;
+  onPending?: (m: PrecogPending) => void;
+  onReveal?: (m: PrecogReveal) => void;
+  onSeal?: (m: PrecogSeal) => void;
+  onError?: (message: string) => void;
+}
+
+/** A live presentiment session: receive prompts, send the operator's signed choices. */
+export interface PrecogSocket {
+  sendChoice(trialIndex: number, choice: Choice): void;
+  sendSign(trialIndex: number, operatorSig: string): void;
+  close(): void;
+}
+
+export function openPrecogStream(wsPath: string, handlers: PrecogHandlers): PrecogSocket {
+  const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${scheme}://${location.host}${wsPath}`);
+  const send = (obj: object): void => { if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj)); };
+  ws.onmessage = (ev) => {
+    let m: PrecogMessage;
+    try { m = JSON.parse(ev.data as string) as PrecogMessage; } catch { return; }
+    switch (m.type) {
+      case 'started': handlers.onStarted?.(m); break;
+      case 'trial': handlers.onTrial?.(m); break;
+      case 'pending': handlers.onPending?.(m); break;
+      case 'reveal': handlers.onReveal?.(m); break;
+      case 'seal': handlers.onSeal?.(m); break;
+      case 'error': handlers.onError?.(m.message); break;
+    }
+  };
+  ws.onerror = () => handlers.onError?.('stream connection error');
+  return {
+    sendChoice: (trialIndex, choice) => send({ type: 'choice', trialIndex, choice }),
+    sendSign: (trialIndex, operatorSig) => send({ type: 'sign', trialIndex, operatorSig }),
+    close: () => { try { ws.close(); } catch { /* already closing */ } },
+  };
+}
+
 // ---------- read APIs (browse / stats / history / verify) ----------
 
 export interface OpenPayload {
@@ -145,9 +217,14 @@ export interface SealPayload {
   outputCommitment: string;
   rawSha256: string;
   rawBlobRef: string;
-  leafBytes: number;
-  nSamples: number;
-  ones: number;
+  // micro-PK
+  leafBytes?: number;
+  nSamples?: number;
+  ones?: number;
+  // precognition
+  trials?: number;
+  hits?: number;
+  optionsPerTrial?: number;
 }
 
 export interface SessionSummary {

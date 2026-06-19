@@ -70,6 +70,17 @@ def session_z(ones: int, n: int) -> float:
     return (ones - n * 0.5) / math.sqrt(n * 0.25)
 
 
+def hit_rate_z(hits: int, n: int, p: float) -> float:
+    """z for `hits` of `n` forced-choice trials under chance rate p (precognition)."""
+    return (hits - n * p) / math.sqrt(n * p * (1 - p))
+
+
+def derive_precog_target(beacon_value_hex: str, trial_index: int, options_per_trial: int) -> int:
+    """Mirror of derivePrecogTarget in packages/core/src/precog.ts (spec §7.5)."""
+    msg = bytes.fromhex(beacon_value_hex) + trial_index.to_bytes(4, "big")
+    return int.from_bytes(hashlib.sha256(msg).digest()[:8], "big") % options_per_trial
+
+
 def phi(z: float) -> float:
     """Standard-normal CDF."""
     return 0.5 * math.erfc(-z / math.sqrt(2))
@@ -155,7 +166,10 @@ def verify_operator_sig(pubkey: str, precommit: str, sig: str):
 
 def load_experiment_def(eid: str, version: int):
     path = EXPERIMENTS_DIR / f"{eid}-v{version}.json"
-    return json.loads(path.read_text()) if path.exists() else None
+    # MUST be UTF-8 (not the platform default, which is cp1252 on Windows): a
+    # definition may carry non-ASCII (e.g. stimulus glyphs), and any decoding
+    # difference would change its content hash and break verification.
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 def verify_commitments(open_entries: dict) -> None:
@@ -182,8 +196,100 @@ def verify_commitments(open_entries: dict) -> None:
     print()
 
 
+def score_precognition(seals: list[dict], opens: dict) -> None:
+    """Per-session hit-rate and per-operator aggregation toward H1 (a specific
+    person beating chance *consistently* across their own sessions). EXPLORATORY."""
+    print("\npresentiment (forced-choice precognition) sessions:")
+    print(f"{'session':10}{'operator':12}{'hits / N':>12}{'rate':>8}{'z':>9}{'p(1-tail)':>11}")
+    print("-" * 62)
+    by_operator: dict[str, list[float]] = {}
+    all_z: list[float] = []
+    for s in seals:
+        op = opens.get(s["sessionId"], {}).get("payload", {})
+        pub = op.get("operatorPubKey", "?")
+        k, hits, n = s["optionsPerTrial"], s["hits"], s["trials"]
+        z = hit_rate_z(hits, n, 1 / k) if n else 0.0
+        rate = (hits / n) if n else 0.0
+        all_z.append(z)
+        by_operator.setdefault(pub, []).append(z)
+        print(f"{s['sessionId'][:8]:10}{pub.split(':')[-1][:10]:12}{hits:>6}/{n:<5}{rate * 100:>6.0f}%{z:>+9.3f}{1 - phi(z):>11.3f}")
+
+    print("\nper-operator (toward H1 - consistency across an operator's own sessions):")
+    for pub, zs in by_operator.items():
+        print(f"  {pub.split(':')[-1][:10]:12} sessions={len(zs):<3} Stouffer z = {stouffer(zs):+.3f}")
+    if all_z:
+        print(f"  corpus      n={len(all_z):<3} Stouffer z = {stouffer(all_z):+.3f}  (EXPLORATORY)")
+    repeats = {p: zs for p, zs in by_operator.items() if len(zs) >= 4}
+    if len(repeats) >= 2:
+        firsts = [sum(zs[: len(zs) // 2]) / (len(zs) // 2) for zs in repeats.values()]
+        seconds = [sum(zs[len(zs) // 2:]) / (len(zs) - len(zs) // 2) for zs in repeats.values()]
+        print(f"  split-half reliability (first vs second half of each operator): r = {pearson(firsts, seconds):+.3f}")
+    else:
+        print("  (H1 split-half reliability needs operators with several sessions each; not enough yet)")
+
+
+def pearson(xs: list[float], ys: list[float]) -> float:
+    n = len(xs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    vx = math.sqrt(sum((x - mx) ** 2 for x in xs))
+    vy = math.sqrt(sum((y - my) ** 2 for y in ys))
+    return cov / (vx * vy) if vx and vy else 0.0
+
+
+def verify_blob(ledger_dir: Path, s: dict, opens: dict) -> None:
+    """Re-verify a sealed session's raw blob against its recorded commitments.
+    Branches on kind by seal shape (micro-PK has leafBytes; precog has trials)."""
+    sid = s["sessionId"][:8]
+    bp = ledger_dir / s["rawBlobRef"]
+    if not bp.exists():
+        print(f"  {sid}  blob MISSING ({s['rawBlobRef']})")
+        return
+    data = bp.read_bytes()
+    flat_ok = ("sha256:" + hashlib.sha256(data).hexdigest()) == s.get("rawSha256")
+
+    if "leafBytes" in s:  # micro-PK: Merkle over fixed byte windows
+        leaves = [data[i:i + s["leafBytes"]] for i in range(0, len(data), s["leafBytes"])]
+        merkle_ok = merkle_root(leaves) == s["outputCommitment"]
+        verdict = "OK" if (flat_ok and merkle_ok) else "MISMATCH"
+        print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'})")
+        return
+
+    # precognition: blob is a canonical JSON array of trial records (spec §7.5).
+    op = opens.get(s["sessionId"], {}).get("payload", {})
+    pub = op.get("operatorPubKey", "")
+    k = s["optionsPerTrial"]
+    defn = load_experiment_def(op.get("experimentId", ""), op.get("experimentVersion", 0))
+    vocab = (defn.get("choices") or defn.get("intentions") or []) if defn else []
+    recs = json.loads(data.decode("utf-8"))
+    leaves = [canonicalize(r).encode("utf-8") for r in recs]
+    merkle_ok = merkle_root(leaves) == s["outputCommitment"]
+
+    trials_ok = True
+    sig_state, have_check = "ok", False
+    for r in recs:
+        if r["targetRound"] <= r["prevBeaconRound"]:
+            trials_ok = False  # target must be a FUTURE round
+        if derive_precog_target(r["beaconValue"], r["trialIndex"], k) != r["target"]:
+            trials_ok = False  # target must be reproducible from the beacon
+        if vocab and r["choice"] in vocab and (1 if vocab.index(r["choice"]) == r["target"] else 0) != r["hit"]:
+            trials_ok = False  # hit must follow from choice vs target
+        tc = sha256_str(canonicalize({
+            "sessionId": op.get("sessionId"), "trialIndex": r["trialIndex"], "choice": r["choice"],
+            "targetRound": r["targetRound"], "prevBeaconRound": r["prevBeaconRound"], "operatorPubKey": pub,
+        }))
+        sv = verify_operator_sig(pub, tc, r["operatorSig"])
+        if sv is not None:
+            have_check = True
+            if sv is False:
+                sig_state, trials_ok = "BAD", False
+    sig_txt = sig_state if have_check else "-"
+    verdict = "OK" if (flat_ok and merkle_ok and trials_ok) else "MISMATCH"
+    print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'}, {len(recs)} trials re-derived, sigs {sig_txt})")
+
+
 def main(path: str) -> int:
-    entries = [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
+    entries = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
     print(f"ledger entries: {len(entries)}")
 
     bad = verify_chain(entries)
@@ -197,58 +303,62 @@ def main(path: str) -> int:
 
     verify_commitments(opens)
 
-    print(f"{'session':10}{'intent':9}{'source':9}{'ones / N':>16}{'z':>9}{'dir-z':>8}{'p(1-tail)':>11}")
-    print("-" * 72)
-    by_intent: dict[str, list[float]] = {"HIGH": [], "LOW": [], "BASELINE": []}
-    directional: list[float] = []
-    n_confirmatory = 0
-    for s in seals:
-        oe = opens.get(s["sessionId"])
-        op = oe["payload"] if oe else {}
-        intent = op.get("intention", "?")
-        src = op.get("entropySource", {})
-        srcid, conf = src.get("id", "?"), src.get("confirmatory", False)
-        n_confirmatory += 1 if conf else 0
-        z = session_z(s["ones"], s["nSamples"])
-        dirz = z if intent == "HIGH" else (-z if intent == "LOW" else None)
-        if intent in by_intent:
-            by_intent[intent].append(z)
-        p1 = "" if dirz is None else f"{1 - phi(dirz):.3f}"
-        dz = "" if dirz is None else f"{dirz:+.2f}"
-        if dirz is not None:
-            directional.append(dirz)
-        print(f"{s['sessionId'][:8]:10}{intent:9}{srcid:9}{s['ones']:>8}/{s['nSamples']:<7}{z:>+9.3f}{dz:>8}{p1:>11}")
+    # Dispatch by kind via seal shape: micro-PK commits ones/nSamples,
+    # precognition commits hits/trials. Each kind scores differently (spec §5/§7.5).
+    micropk_seals = [s for s in seals if "ones" in s]
+    precog_seals = [s for s in seals if "hits" in s]
+    n_confirmatory = sum(
+        1 for s in seals
+        if opens.get(s["sessionId"], {}).get("payload", {}).get("entropySource", {}).get("confirmatory", False)
+    )
+
+    if micropk_seals:
+        print(f"{'session':10}{'intent':9}{'source':9}{'ones / N':>16}{'z':>9}{'dir-z':>8}{'p(1-tail)':>11}")
+        print("-" * 72)
+        by_intent: dict[str, list[float]] = {"HIGH": [], "LOW": [], "BASELINE": []}
+        directional: list[float] = []
+        for s in micropk_seals:
+            oe = opens.get(s["sessionId"])
+            op = oe["payload"] if oe else {}
+            intent = op.get("intention", "?")
+            src = op.get("entropySource", {})
+            srcid = src.get("id", "?")
+            z = session_z(s["ones"], s["nSamples"])
+            dirz = z if intent == "HIGH" else (-z if intent == "LOW" else None)
+            if intent in by_intent:
+                by_intent[intent].append(z)
+            p1 = "" if dirz is None else f"{1 - phi(dirz):.3f}"
+            dz = "" if dirz is None else f"{dirz:+.2f}"
+            if dirz is not None:
+                directional.append(dirz)
+            print(f"{s['sessionId'][:8]:10}{intent:9}{srcid:9}{s['ones']:>8}/{s['nSamples']:<7}{z:>+9.3f}{dz:>8}{p1:>11}")
+
+        print("\naggregates (EXPLORATORY - not the pre-registered confirmatory test):")
+        for intent in ("HIGH", "LOW"):
+            zs = by_intent[intent]
+            if zs:
+                print(f"  {intent:9} n={len(zs):<3} Stouffer z = {stouffer(zs):+.3f}")
+        if directional:
+            dz = stouffer(directional)
+            print(f"  intended-direction (HIGH & LOW)  n={len(directional):<3} z = {dz:+.3f}  one-tailed p = {1 - phi(dz):.3f}")
+
+    if precog_seals:
+        score_precognition(precog_seals, opens)
 
     dangling = [sid for sid in opens if sid not in {s["sessionId"] for s in seals}]
     if dangling:
         print(f"\n({len(dangling)} open session(s) with no seal - abandoned/in-progress, not scored)")
 
-    print("\naggregates (EXPLORATORY - not the pre-registered confirmatory test):")
-    for intent in ("HIGH", "LOW"):
-        zs = by_intent[intent]
-        if zs:
-            print(f"  {intent:9} n={len(zs):<3} Stouffer z = {stouffer(zs):+.3f}")
-    if directional:
-        dz = stouffer(directional)
-        print(f"  intended-direction (HIGH & LOW)  n={len(directional):<3} z = {dz:+.3f}  one-tailed p = {1 - phi(dz):.3f}")
-
     # raw-data verification (spec D2): the stored blob must reproduce BOTH the
-    # flat SHA-256 and the streaming Merkle commitment recorded in the seal.
+    # flat SHA-256 and the recorded commitment (micro-PK: streaming Merkle over
+    # byte windows; precognition: Merkle over canonical trial records, plus each
+    # trial's target/hit re-derived from its future beacon round).
     ledger_dir = Path(path).parent
-    blob_seals = [e["payload"] for e in entries if e["type"] == "session.seal" and "rawBlobRef" in e["payload"]]
+    blob_seals = [s for s in seals if "rawBlobRef" in s]
     if blob_seals:
         print("\nraw-data verification (blob -> commitments):")
         for s in blob_seals:
-            bp = ledger_dir / s["rawBlobRef"]
-            if not bp.exists():
-                print(f"  {s['sessionId'][:8]}  blob MISSING ({s['rawBlobRef']})")
-                continue
-            data = bp.read_bytes()
-            flat_ok = ("sha256:" + hashlib.sha256(data).hexdigest()) == s.get("rawSha256")
-            leaves = [data[i:i + s["leafBytes"]] for i in range(0, len(data), s["leafBytes"])]
-            merkle_ok = merkle_root(leaves) == s["outputCommitment"]
-            verdict = "OK" if (flat_ok and merkle_ok) else "MISMATCH"
-            print(f"  {s['sessionId'][:8]}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'})")
+            verify_blob(ledger_dir, s, opens)
 
     anchors = [e["payload"] for e in entries if e["type"] == "external.anchor"]
     if anchors:

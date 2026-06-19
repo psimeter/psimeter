@@ -10,7 +10,17 @@
 // (The raw-bit Merkle root is verified against the multi-megabyte raw blob in
 // analysis/analyze.py; the in-browser checks cover everything except that blob.)
 
-import { buildPrecommit, experimentHash, hashEntry } from '@psymeter/core';
+import {
+  buildPrecommit,
+  experimentHash,
+  hashEntry,
+  canonicalize,
+  sha256,
+  MerkleAccumulator,
+  derivePrecogTarget,
+  trialCommit,
+  choiceVocabulary,
+} from '@psymeter/core';
 import * as ed from '@noble/ed25519';
 import type { OpenPayload, SealPayload, SessionDetail } from './api';
 
@@ -70,9 +80,82 @@ export async function verifySession(detail: SessionDetail): Promise<Check[]> {
     const s = seal.payload as SealPayload;
     checks.push({ label: 'Seal entry hash is intact', ok: hashEntry(seal) === seal.entryHash });
     checks.push({ label: 'Seal binds to this open entry', ok: s.openEntryHash === open.entryHash });
+
+    // Precognition: the small per-trial blob is re-verifiable IN THE BROWSER —
+    // each choice was signed and bound to a future beacon round, and every target
+    // is re-derived from that round's public randomness (spec §7.5).
+    if (typeof s.trials === 'number') {
+      await verifyPrecogTrials(checks, o, s, experiment);
+    }
   }
 
   return checks;
+}
+
+interface TrialRecord {
+  trialIndex: number;
+  choice: string;
+  targetRound: number;
+  prevBeaconRound: number;
+  beaconValue: string;
+  beaconSignature?: string;
+  target: number;
+  hit: number;
+  operatorSig: string;
+}
+
+async function verifyPrecogTrials(
+  checks: Check[],
+  o: OpenPayload,
+  s: SealPayload,
+  experiment: SessionDetail['experiment'],
+): Promise<void> {
+  let records: TrialRecord[];
+  let bytes: Uint8Array;
+  try {
+    const res = await fetch(`/${s.rawBlobRef}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    bytes = new Uint8Array(await res.arrayBuffer());
+    records = JSON.parse(new TextDecoder().decode(bytes)) as TrialRecord[];
+  } catch (e) {
+    checks.push({ label: 'Per-trial records fetched and verified', ok: false, note: `could not load raw blob: ${String(e)}` });
+    return;
+  }
+
+  const k = s.optionsPerTrial ?? 0;
+  const vocab = experiment ? choiceVocabulary(experiment) : [];
+  const merkle = new MerkleAccumulator();
+  let sigsOk = true;
+  let futureOk = true;
+  let targetsOk = true;
+  let hitsOk = true;
+
+  for (const r of records) {
+    merkle.add(new TextEncoder().encode(canonicalize(r)));
+    const tc = trialCommit({
+      sessionId: o.sessionId,
+      trialIndex: r.trialIndex,
+      choice: r.choice,
+      targetRound: r.targetRound,
+      prevBeaconRound: r.prevBeaconRound,
+      operatorPubKey: o.operatorPubKey,
+    });
+    if (!(await verifySignature(o.operatorPubKey, tc, r.operatorSig))) sigsOk = false;
+    if (r.targetRound <= r.prevBeaconRound) futureOk = false;
+    if (derivePrecogTarget(r.beaconValue, r.trialIndex, k) !== r.target) targetsOk = false;
+    if (vocab.length && vocab.indexOf(r.choice) !== -1) {
+      const expectedHit = vocab.indexOf(r.choice) === r.target ? 1 : 0;
+      if (expectedHit !== r.hit) hitsOk = false;
+    }
+  }
+
+  const n = records.length;
+  checks.push({ label: `All ${n} choices were signed by the operator`, ok: sigsOk });
+  checks.push({ label: `Every target round was in the future at choice time`, ok: futureOk, note: 'target round > the round known when the choice was made' });
+  checks.push({ label: `All ${n} targets re-derive from the public beacon`, ok: targetsOk });
+  checks.push({ label: 'Recorded hits match choice vs target', ok: hitsOk });
+  checks.push({ label: 'Trial records reproduce the sealed Merkle root', ok: merkle.root() === s.outputCommitment, note: s.outputCommitment });
+  checks.push({ label: 'Raw blob matches its recorded SHA-256', ok: sha256(bytes) === s.rawSha256 });
 }
 
 async function verifySignature(pubKey: string, precommit: string, sig: string): Promise<boolean> {

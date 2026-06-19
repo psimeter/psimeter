@@ -11,6 +11,7 @@ import { selectEntropySource } from './select.js';
 import { selectBeacon, type BeaconProvider } from './beacon.js';
 import { commitOpen, prepareSession, type SessionContext } from './session.js';
 import { streamMicroPk } from './kinds/microPk.js';
+import { streamPrecog } from './kinds/precog.js';
 import { safeSend } from './wsSend.js';
 import { verifyEd25519 } from './sign.js';
 
@@ -127,6 +128,12 @@ export function createApp(): http.Server {
       res.writeHead(404).end('not found');
       return;
     }
+    // Raw blobs are public artifacts (D2) — serve them so the in-browser /verify
+    // can re-derive precognition trials and re-check Merkle roots without trusting us.
+    if (req.method === 'GET' && path.startsWith('/blobs/')) {
+      void serveBlob(res, path);
+      return;
+    }
     void serveStatic(req, res);
   });
 
@@ -138,7 +145,7 @@ export function createApp(): http.Server {
       return;
     }
     const id = url.searchParams.get('session') ?? '';
-    wss.handleUpgrade(req, socket, head, (ws) => handleStream(ws, id, store, sessions));
+    wss.handleUpgrade(req, socket, head, (ws) => handleStream(ws, id, store, sessions, beaconProvider));
   });
 
   return server;
@@ -164,13 +171,16 @@ async function handleCreateSession(
       return;
     }
     const experiment = loadExperiment(body.experimentId ?? 'binary-micropk', body.version ?? 1);
-    // The session-level committed choice. Defaults to the first of the
-    // definition's vocabulary; validated against it (kind-agnostic — see core
-    // choiceVocabulary/isValidChoice).
-    const intention = body.intention ?? choiceVocabulary(experiment)[0] ?? '';
-    if (!isValidChoice(experiment, intention)) {
-      sendJson(res, 400, { error: `invalid choice "${intention}" for ${experiment.id}` });
-      return;
+    // Micro-PK commits a single session-level choice (HIGH/LOW/BASELINE) here;
+    // kinds whose choices are per-trial (precognition) commit none — they bind
+    // each choice to a future beacon round during the run instead (spec §7.5).
+    let intention = '';
+    if (experiment.kind === 'micro-pk-binary') {
+      intention = body.intention ?? choiceVocabulary(experiment)[0] ?? '';
+      if (!isValidChoice(experiment, intention)) {
+        sendJson(res, 400, { error: `invalid choice "${intention}" for ${experiment.id}` });
+        return;
+      }
     }
 
     // Bind a fresh public beacon pulse so the session provably postdates it (D2).
@@ -269,6 +279,7 @@ function handleStream(
   id: string,
   store: LedgerStore,
   sessions: Map<string, SessionContext>,
+  beaconProvider: BeaconProvider,
 ): void {
   const ctx = sessions.get(id);
   if (!ctx || !ctx.open || ctx.started) {
@@ -280,10 +291,13 @@ function handleStream(
   ws.on('close', () => sessions.delete(id));
 
   // Dispatch to the kind's generation/reveal protocol (spec §10). Micro-PK is a
-  // one-way stream; other kinds (e.g. precognition) register their own handler.
+  // one-way stream; precognition is a two-way per-trial commit→reveal loop.
   switch (ctx.experiment.kind) {
     case 'micro-pk-binary':
       streamMicroPk(ws, ctx, store, { blobDir, fast: FAST });
+      break;
+    case 'precognition-presentiment':
+      streamPrecog(ws, ctx, store, beaconProvider, { blobDir });
       break;
     default:
       safeSend(ws, { type: 'error', message: `no runner for kind "${ctx.experiment.kind}"` });
@@ -313,6 +327,17 @@ async function serveStatic(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
   res.writeHead(404).end('not found');
+}
+
+/** Serve a content-addressed raw blob from the ledger's blobs/ directory. */
+async function serveBlob(res: http.ServerResponse, urlPath: string): Promise<void> {
+  const name = decodeURIComponent(urlPath.slice('/blobs/'.length));
+  const fsPath = resolve(blobDir, name);
+  if (!fsPath.startsWith(blobDir)) {
+    res.writeHead(403).end('forbidden');
+    return;
+  }
+  if (!(await tryServeFile(fsPath, res))) res.writeHead(404).end('not found');
 }
 
 /** Read and send a file; returns false (without responding) if it is absent. */

@@ -1,0 +1,17 @@
+{
+  "id": "precognition-presentiment",
+  "version": 1,
+  "title": "Presentiment (forced-choice precognition)",
+  "kind": "precognition-presentiment",
+  "params": {
+    "sessionSeconds": 120,
+    "trialsPerSession": 20,
+    "optionsPerTrial": 2,
+    "beaconRoundOffset": 2
+  },
+  "choices": ["calm", "dread"],
+  "stimuli": {
+    "calm": { "label": "Calm", "cue": "calm", "glyph": "🌿", "color": "#2fae8f" },
+    "dread": { "label": "Dread", "cue": "dread", "glyph": "⚠", "color": "#e5484d" }
+  }
+}

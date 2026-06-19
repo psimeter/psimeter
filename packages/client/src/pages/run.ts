@@ -7,6 +7,7 @@ import type { Disposer } from '../router';
 import { fetchExperiments, type ExperimentInfo } from '../api';
 import { loading, errorBox } from '../widgets';
 import { renderMicroPkRunner } from './run/microPk';
+import { renderPrecogRunner } from './run/precog';
 
 export function renderRun(outlet: HTMLElement, query: URLSearchParams): Disposer {
   const id = query.get('experiment') ?? 'binary-micropk';
@@ -38,6 +39,8 @@ function dispatch(outlet: HTMLElement, info: ExperimentInfo): Disposer {
   switch (info.kind) {
     case 'micro-pk-binary':
       return renderMicroPkRunner(outlet, info);
+    case 'precognition-presentiment':
+      return renderPrecogRunner(outlet, info);
     default:
       outlet.append(
         el('div', { class: 'page' }, [

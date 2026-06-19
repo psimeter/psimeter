@@ -20,6 +20,9 @@ export default defineConfig({
         ws: true,
         changeOrigin: false,
       },
+      // Raw blobs (content-addressed artifacts) — needed by the in-browser
+      // /verify view to re-derive precognition trials (spec §7.5).
+      '/blobs': { target: 'http://localhost:8787', changeOrigin: false },
     },
   },
   build: {

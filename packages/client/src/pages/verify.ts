@@ -69,9 +69,12 @@ function render(detail: SessionDetail, checks: Check[]): HTMLElement[] {
       ]),
     ])));
 
+  const isPrecog = typeof s?.trials === 'number';
   const fields = el('dl', { class: 'kv' });
   const rows: Array<[string, string]> = [
-    ['intention', o.intention],
+    isPrecog
+      ? ['result', s ? `${s.hits} / ${s.trials} hits` : '—']
+      : ['intention', o.intention || '—'],
     ['operator', o.operatorPubKey],
     ['beacon', `${o.beacon.source} · round ${o.beacon.round}`],
     ['entropy', `${o.entropySource.id} (${o.entropySource.confirmatory ? 'confirmatory' : 'non-confirmatory'})`],
@@ -81,14 +84,18 @@ function render(detail: SessionDetail, checks: Check[]): HTMLElement[] {
   ];
   for (const [k, v] of rows) fields.append(el('dt', {}, k), el('dd', { class: 'mono' }, v));
 
+  const closing = isPrecog
+    ? el('p', { class: 'faint' }, 'Every trial above — each choice signed before its target existed, and each target re-derived from the public beacon — was verified here in your browser. Nothing was taken on trust.')
+    : el('p', { class: 'faint' }, [
+        'The raw-bit Merkle root is checked against the full multi-megabyte raw blob in ',
+        el('code', {}, 'analysis/analyze.py'),
+        '; everything else was just verified above, in your browser.',
+      ]);
+
   return [
     verdict,
     el('div', { class: 'card' }, [el('h2', { style: 'margin:0 0 12px;font-size:16px' }, 'Checks'), checklist]),
     el('div', { class: 'card' }, [el('h2', { style: 'margin:0 0 12px;font-size:16px' }, 'Revealed fields'), fields]),
-    el('p', { class: 'faint' }, [
-      'The raw-bit Merkle root is checked against the full multi-megabyte raw blob in ',
-      el('code', {}, 'analysis/analyze.py'),
-      '; everything else was just verified above, in your browser.',
-    ]),
+    closing,
   ];
 }
