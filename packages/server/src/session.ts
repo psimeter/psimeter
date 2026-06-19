@@ -3,35 +3,31 @@ import {
   buildPrecommit,
   experimentHash,
   GENESIS_PREV,
-  MerkleAccumulator,
-  sessionZ,
   type BeaconRef,
+  type Choice,
   type EntropySource,
   type ExperimentDefinition,
-  type Intention,
   type LedgerEntry,
 } from '@psymeter/core';
 import type { LedgerStore } from './ledgerStore.js';
-import { writeBlob } from './blobStore.js';
 
-/** The integer parameters of a `micro-pk-binary` experiment (spec D13). */
-export interface BinaryParams {
-  trialBits: number;
-  bitRatePerSec: number;
-  sessionSeconds: number;
-  trialsPerSession: number;
-  bitsPerSession: number;
-  checkpointEveryTrials: number;
-  intentionAssignment: string;
-  conditioning: string;
-}
+/**
+ * The shared, kind-agnostic session spine (spec §7.2): build the pre-commitment
+ * and anchor before any randomness exists, then — once the operator has signed —
+ * append the immutable `session.open` entry. The kind-specific generation /
+ * reveal protocol and seal live in `kinds/*` (e.g. kinds/microPk.ts), dispatched
+ * by `experiment.kind` in app.ts.
+ */
 
 /** Live, in-memory state for one session between pre-commit and seal. */
 export interface SessionContext {
   sessionId: string;
   experiment: ExperimentDefinition;
-  params: BinaryParams;
-  intention: Intention;
+  /** The frozen, content-hashed parameter set (kind casts to its own shape). */
+  params: Record<string, unknown>;
+  /** The session-level committed choice (micro-PK intention; '' for kinds whose
+   * choices are per-trial, e.g. precognition). */
+  intention: Choice;
   beacon: BeaconRef;
   operatorPubKey: string;
   source: EntropySource;
@@ -46,7 +42,7 @@ export interface SessionContext {
 
 export interface PrepareArgs {
   experiment: ExperimentDefinition;
-  intention: Intention;
+  intention: Choice;
   operatorPubKey: string;
   beacon: BeaconRef;
   source: EntropySource;
@@ -60,7 +56,7 @@ export interface PrepareArgs {
  */
 export function prepareSession(store: LedgerStore, args: PrepareArgs): SessionContext {
   const { experiment, intention, operatorPubKey, beacon, source } = args;
-  const params = experiment.params as unknown as BinaryParams;
+  const params = experiment.params;
   const sessionId = randomUUID();
   const serverNonce = randomBytes(16).toString('hex');
   const prevHash = store.currentHead ? store.currentHead.entryHash : GENESIS_PREV;
@@ -111,90 +107,4 @@ export function commitOpen(store: LedgerStore, ctx: SessionContext, operatorSig:
   });
   ctx.open = open;
   return open;
-}
-
-export interface Checkpoint {
-  trial: number;
-  ones: number;
-  total: number;
-  zDisplay: number;
-  root: string;
-}
-
-/**
- * Phases B + C — isolated generation with a streaming Merkle commitment, then
- * seal (spec §7.2). Reads NOTHING from the client (one-way isolation, pillar 5).
- * One Merkle leaf is committed per checkpoint window.
- *
- * `tickMs` paces the stream for the human experience only; it is NOT a committed
- * parameter and does not affect the statistics (spec §8.6).
- */
-export async function generateAndSeal(
-  ctx: SessionContext,
-  store: LedgerStore,
-  opts: { tickMs: number; blobDir: string; onCheckpoint: (c: Checkpoint) => void },
-): Promise<LedgerEntry> {
-  if (!ctx.open) throw new Error('session has not been signed/opened');
-  const p = ctx.params;
-  if (p.trialBits % 8 !== 0) throw new Error('trialBits must be a multiple of 8');
-  const bytesPerTrial = p.trialBits / 8;
-
-  const merkle = new MerkleAccumulator();
-  const chunks: Uint8Array[] = [];
-  let ones = 0;
-  let total = 0;
-  let trial = 0;
-
-  while (trial < p.trialsPerSession) {
-    const batchTrials = Math.min(p.checkpointEveryTrials, p.trialsPerSession - trial);
-    const block = await ctx.source.read(batchTrials * bytesPerTrial);
-    merkle.add(block); // commit to this checkpoint window's raw bytes
-    chunks.push(block); // retain the raw bytes — they ARE the record (D2)
-    for (const byte of block) ones += popcount(byte);
-    trial += batchTrials;
-    total += batchTrials * p.trialBits;
-
-    opts.onCheckpoint({ trial, ones, total, zDisplay: sessionZ(ones, total), root: merkle.root() });
-    if (opts.tickMs > 0 && trial < p.trialsPerSession) await sleep(opts.tickMs);
-  }
-
-  // Persist the full raw stream, content-addressed, for independent re-analysis
-  // and verification against the commitments (spec §7.2, D2).
-  const blob = writeBlob(opts.blobDir, concatBytes(chunks));
-
-  return store.append('session.seal', {
-    sessionId: ctx.sessionId,
-    openEntryHash: ctx.open.entryHash,
-    outputCommitment: merkle.root(),
-    rawSha256: blob.sha256,
-    rawBlobRef: blob.ref,
-    leafBytes: (p.checkpointEveryTrials * p.trialBits) / 8, // Merkle leaf size, for re-verification
-    nSamples: total,
-    ones,
-  });
-}
-
-function concatBytes(parts: Uint8Array[]): Uint8Array {
-  const total = parts.reduce((n, part) => n + part.length, 0);
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const part of parts) {
-    out.set(part, offset);
-    offset += part.length;
-  }
-  return out;
-}
-
-function popcount(b: number): number {
-  let n = b;
-  let c = 0;
-  while (n) {
-    c += n & 1;
-    n >>= 1;
-  }
-  return c;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

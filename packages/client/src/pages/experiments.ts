@@ -37,15 +37,7 @@ export function renderExperiments(outlet: HTMLElement): Disposer {
 }
 
 function card(d: ExperimentInfo): HTMLElement {
-  const p = d.params as Record<string, number | string>;
-  const facts = el('dl', { class: 'facts' });
-  const rows: Array<[string, string]> = [
-    ['trial', `${p.trialBits} bits`],
-    ['session', `${p.trialsPerSession} trials · ${Number(p.bitsPerSession).toLocaleString()} bits · ${p.sessionSeconds}s`],
-    ['conditioning', String(p.conditioning)],
-  ];
-  for (const [k, v] of rows) facts.append(el('dt', {}, k), el('dd', {}, v));
-
+  const runHref = `/run?experiment=${encodeURIComponent(d.id)}&v=${d.version}`;
   return el('div', { class: 'card' }, [
     el('div', { class: 'row-between' }, [
       el('div', { class: 'row', style: 'gap:10px;align-items:center' }, [
@@ -56,12 +48,33 @@ function card(d: ExperimentInfo): HTMLElement {
     ]),
     el('div', { class: 'stat-row', style: 'margin:16px 0' }, [
       stat(String(d.stats.sealed), 'sessions'),
-      stat(String(d.stats.byIntention.HIGH), 'HIGH'),
-      stat(String(d.stats.byIntention.LOW), 'LOW'),
-      stat(String(d.stats.byIntention.BASELINE), 'BASELINE'),
+      // Per-choice counts over the definition's own vocabulary (kind-agnostic).
+      ...d.choices.map((c) => stat(String(d.stats.byChoice[c] ?? 0), c)),
     ]),
-    facts,
+    facts(d),
     el('div', { style: 'margin-top:16px' },
-      el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run this experiment')),
+      el('a', { class: 'btn primary', href: runHref, 'data-link': true }, 'Run this experiment')),
   ]);
+}
+
+/** The immutable, content-hashed parameters (D13), summarised per kind. */
+function facts(d: ExperimentInfo): HTMLElement {
+  const p = d.params as Record<string, number | string>;
+  const dl = el('dl', { class: 'facts' });
+  const rows: Array<[string, string]> =
+    d.kind === 'micro-pk-binary'
+      ? [
+          ['trial', `${p.trialBits} bits`],
+          ['session', `${p.trialsPerSession} trials · ${Number(p.bitsPerSession).toLocaleString()} bits · ${p.sessionSeconds}s`],
+          ['conditioning', String(p.conditioning)],
+        ]
+      : d.kind === 'precognition-presentiment'
+        ? [
+            ['trial', `1 of ${p.optionsPerTrial} options`],
+            ['session', `${p.trialsPerSession} trials · ${p.sessionSeconds}s`],
+            ['target', `future drand round (+${p.beaconRoundOffset})`],
+          ]
+        : Object.entries(p).map(([k, v]) => [k, String(v)] as [string, string]);
+  for (const [k, v] of rows) dl.append(el('dt', {}, k), el('dd', {}, v));
+  return dl;
 }

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { sessionZ, type Intention, type LedgerEntry } from '@psymeter/core';
+import { displayZFromSeal, type Choice, type LedgerEntry } from '@psymeter/core';
 
 /**
  * Read-only view over the append-only ledger (spec §8.5) for the public site's
@@ -9,6 +9,10 @@ import { sessionZ, type Intention, type LedgerEntry } from '@psymeter/core';
  * numbers are produced by analysis/analyze.py over the published raw data, never
  * by this server. Parsed entries are cached and invalidated by the file's
  * size+mtime, so a freshly sealed session shows up without a restart.
+ *
+ * Kind-agnostic: the per-session display z is derived from the seal payload's
+ * own shape via `displayZFromSeal` (micro-PK bits, precognition hit-rate, …), so
+ * nothing here branches on experiment kind.
  */
 
 /** `session.open` payload as committed in session.ts/commitOpen. */
@@ -16,7 +20,8 @@ export interface OpenPayload {
   sessionId: string;
   experimentId: string;
   experimentVersion: number;
-  intention: Intention;
+  /** The committed choice (micro-PK intention; '' when per-trial, e.g. precog). */
+  intention: Choice;
   operatorPubKey: string;
   operatorSig: string;
   beacon: { source: string; round: number; value: string; chainHash?: string; signature?: string };
@@ -26,32 +31,33 @@ export interface OpenPayload {
   anchor: string;
 }
 
-/** `session.seal` payload as committed in session.ts/generateAndSeal. */
-export interface SealPayload {
+/** A sealed payload, read generically — micro-PK commits ones/nSamples,
+ * precognition commits hits/trials/optionsPerTrial; both carry the commitments. */
+type SealPayload = Record<string, unknown> & {
   sessionId: string;
   openEntryHash: string;
   outputCommitment: string;
-  rawSha256: string;
   rawBlobRef: string;
-  leafBytes: number;
-  nSamples: number;
-  ones: number;
-}
+};
 
 /** Flattened, display-only summary of one session (open joined with its seal). */
 export interface SessionSummary {
   sessionId: string;
   experimentId: string;
   experimentVersion: number;
-  intention: Intention;
+  /** The committed choice for display/grouping (was `intention`). */
+  choice: Choice;
   operatorPubKey: string;
   anchor: string;
   beaconRound: number;
   entropy: { id: string; confirmatory: boolean };
   ts: string;
   sealed: boolean;
-  ones: number | null;
+  /** Micro-PK volume (bits); null for kinds that don't produce a bit stream. */
   nSamples: number | null;
+  /** Precognition volume; null for kinds without forced-choice trials. */
+  trials: number | null;
+  hits: number | null;
   zDisplay: number | null;
 }
 
@@ -107,6 +113,10 @@ export class LedgerReader {
   }
 }
 
+function num(v: unknown): number | null {
+  return typeof v === 'number' ? v : null;
+}
+
 function toSummary(j: Joined): SessionSummary {
   const o = j.open.payload as OpenPayload;
   const s = j.seal ? (j.seal.payload as SealPayload) : null;
@@ -114,43 +124,45 @@ function toSummary(j: Joined): SessionSummary {
     sessionId: o.sessionId,
     experimentId: o.experimentId,
     experimentVersion: o.experimentVersion,
-    intention: o.intention,
+    choice: o.intention,
     operatorPubKey: o.operatorPubKey,
     anchor: o.anchor,
     beaconRound: o.beacon.round,
     entropy: { id: o.entropySource.id, confirmatory: o.entropySource.confirmatory },
     ts: j.seal ? j.seal.ts : j.open.ts,
     sealed: s !== null,
-    ones: s ? s.ones : null,
-    nSamples: s ? s.nSamples : null,
-    zDisplay: s ? sessionZ(s.ones, s.nSamples) : null,
+    nSamples: s ? num(s.nSamples) : null,
+    trials: s ? num(s.trials) : null,
+    hits: s ? num(s.hits) : null,
+    zDisplay: displayZFromSeal(s),
   };
 }
 
-export interface IntentionStat { n: number; meanZ: number | null; }
+export interface ChoiceStat { n: number; meanZ: number | null; }
 
-/** Honest global aggregate: per-intention means, anomaly counts vs the counts
- * chance alone predicts, and the HIGH−LOW contrast (cancels static bias). */
+/** Honest global aggregate: per-choice means, anomaly counts vs the counts
+ * chance alone predicts, and (for micro-PK) the HIGH−LOW contrast. Grouping is
+ * by the committed choice, so it adapts to whatever vocabulary the corpus holds. */
 export function globalStats(rows: SessionSummary[]) {
-  const sealed = rows.filter((r): r is SessionSummary & { zDisplay: number; nSamples: number } => r.sealed);
-  const totalBits = sealed.reduce((n, r) => n + r.nSamples, 0);
+  const sealed = rows.filter((r): r is SessionSummary & { zDisplay: number } => r.sealed && r.zDisplay !== null);
+  const totalBits = sealed.reduce((n, r) => n + (r.nSamples ?? 0), 0);
 
-  const acc: Record<Intention, { n: number; sum: number }> = {
-    HIGH: { n: 0, sum: 0 },
-    LOW: { n: 0, sum: 0 },
-    BASELINE: { n: 0, sum: 0 },
-  };
+  const acc = new Map<string, { n: number; sum: number }>();
   let z2 = 0;
   let z3 = 0;
   for (const r of sealed) {
-    acc[r.intention].n += 1;
-    acc[r.intention].sum += r.zDisplay;
+    const a = acc.get(r.choice) ?? { n: 0, sum: 0 };
+    a.n += 1;
+    a.sum += r.zDisplay;
+    acc.set(r.choice, a);
     if (Math.abs(r.zDisplay) > 2) z2 += 1;
     if (Math.abs(r.zDisplay) > 3) z3 += 1;
   }
-  const meanOf = (k: Intention): number | null => (acc[k].n ? acc[k].sum / acc[k].n : null);
-  const hi = meanOf('HIGH');
-  const lo = meanOf('LOW');
+  const byChoice: Record<string, ChoiceStat> = {};
+  for (const [k, a] of acc) byChoice[k] = { n: a.n, meanZ: a.n ? a.sum / a.n : null };
+
+  const hi = byChoice.HIGH?.meanZ ?? null;
+  const lo = byChoice.LOW?.meanZ ?? null;
 
   const extremes = sealed
     .slice()
@@ -161,11 +173,7 @@ export function globalStats(rows: SessionSummary[]) {
     sessions: rows.length,
     sealed: sealed.length,
     totalBits,
-    byIntention: {
-      HIGH: { n: acc.HIGH.n, meanZ: meanOf('HIGH') },
-      LOW: { n: acc.LOW.n, meanZ: meanOf('LOW') },
-      BASELINE: { n: acc.BASELINE.n, meanZ: meanOf('BASELINE') },
-    } satisfies Record<Intention, IntentionStat>,
+    byChoice,
     // Under the null, P(|z|>2)≈0.0455 and P(|z|>3)≈0.0027 per session.
     anomalies: {
       z2,
@@ -178,11 +186,11 @@ export function globalStats(rows: SessionSummary[]) {
   };
 }
 
-/** Per-experiment counts for the experiments browser. */
+/** Per-experiment counts for the experiments browser, grouped by committed choice. */
 export function experimentStat(rows: SessionSummary[], experimentId: string) {
   const mine = rows.filter((r) => r.experimentId === experimentId);
   const sealed = mine.filter((r) => r.sealed);
-  const byIntention: Record<Intention, number> = { HIGH: 0, LOW: 0, BASELINE: 0 };
-  for (const r of sealed) byIntention[r.intention] += 1;
-  return { sessions: mine.length, sealed: sealed.length, byIntention };
+  const byChoice: Record<string, number> = {};
+  for (const r of sealed) byChoice[r.choice] = (byChoice[r.choice] ?? 0) + 1;
+  return { sessions: mine.length, sealed: sealed.length, byChoice };
 }

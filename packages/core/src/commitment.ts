@@ -1,6 +1,6 @@
 import { canonicalize } from './canonicalize.js';
 import { sha256, hexOf } from './hash.js';
-import type { BeaconRef, Intention } from './types.js';
+import type { BeaconRef, Choice } from './types.js';
 
 /**
  * Inputs frozen at session start, before any randomness exists (spec §7.2).
@@ -11,7 +11,13 @@ export interface PrecommitInput {
   experimentId: string;
   experimentVersion: number;
   experimentHash: string;
-  intention: Intention;
+  /**
+   * The committed operator decision. The JSON key stays `intention` so the
+   * canonical bytes (and therefore every existing micro-PK precommit hash) are
+   * unchanged; the TYPE is widened to a generic `Choice` so other kinds can
+   * commit their own option ids here (spec §10).
+   */
+  intention: Choice;
   operatorPubKey: string; // ed25519 public key — pseudonymous identity (D6)
   beacon: BeaconRef; // freshness anchor (§7)
   sessionId: string;
@@ -36,6 +42,17 @@ export interface Precommit {
 export function buildPrecommit(input: PrecommitInput): Precommit {
   const precommit = sha256(canonicalize(input));
   return { precommit, anchor: anchorFromHash(precommit) };
+}
+
+/**
+ * Generic content commitment: the canonical-JSON SHA-256 of any committable
+ * value ("sha256:…"). Used for sub-session commitments that are not the full
+ * session pre-commitment — e.g. a precognition trial binds its choice to a
+ * future beacon round (spec §7.5) and signs THIS hash before the target exists.
+ * The value MUST satisfy the canonicalize profile (integers/strings only).
+ */
+export function commitHash(value: unknown): string {
+  return sha256(canonicalize(value));
 }
 
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // base32, no I/L/O/U

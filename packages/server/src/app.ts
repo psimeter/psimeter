@@ -3,13 +3,15 @@ import { readFile } from 'node:fs/promises';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { EntropySource, Intention } from '@psymeter/core';
+import { choiceVocabulary, isValidChoice, type Choice, type EntropySource } from '@psymeter/core';
 import { LedgerStore } from './ledgerStore.js';
 import { loadExperiment, listExperiments } from './experiments.js';
 import { LedgerReader, globalStats, experimentStat, type OpenPayload } from './ledgerReader.js';
 import { selectEntropySource } from './select.js';
 import { selectBeacon, type BeaconProvider } from './beacon.js';
-import { commitOpen, generateAndSeal, prepareSession, type SessionContext } from './session.js';
+import { commitOpen, prepareSession, type SessionContext } from './session.js';
+import { streamMicroPk } from './kinds/microPk.js';
+import { safeSend } from './wsSend.js';
 import { verifyEd25519 } from './sign.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -154,7 +156,7 @@ async function handleCreateSession(
     const body = JSON.parse(await readBody(req)) as {
       experimentId?: string;
       version?: number;
-      intention?: Intention;
+      intention?: Choice;
       operatorPubKey?: string;
     };
     if (!body.operatorPubKey) {
@@ -162,9 +164,12 @@ async function handleCreateSession(
       return;
     }
     const experiment = loadExperiment(body.experimentId ?? 'binary-micropk', body.version ?? 1);
-    const intention = body.intention ?? 'HIGH';
-    if (!experiment.intentions.includes(intention)) {
-      sendJson(res, 400, { error: `invalid intention "${intention}"` });
+    // The session-level committed choice. Defaults to the first of the
+    // definition's vocabulary; validated against it (kind-agnostic — see core
+    // choiceVocabulary/isValidChoice).
+    const intention = body.intention ?? choiceVocabulary(experiment)[0] ?? '';
+    if (!isValidChoice(experiment, intention)) {
+      sendJson(res, 400, { error: `invalid choice "${intention}" for ${experiment.id}` });
       return;
     }
 
@@ -227,7 +232,8 @@ function handleExperiments(res: http.ServerResponse, reader: LedgerReader): void
     title: d.title,
     kind: d.kind,
     params: d.params,
-    intentions: d.intentions,
+    choices: choiceVocabulary(d),
+    stimuli: d.stimuli ?? null,
     stats: experimentStat(rows, d.id),
   }));
   sendJson(res, 200, { experiments });
@@ -266,49 +272,23 @@ function handleStream(
 ): void {
   const ctx = sessions.get(id);
   if (!ctx || !ctx.open || ctx.started) {
-    ws.send(JSON.stringify({ type: 'error', message: 'session not found, unsigned, or already started' }));
+    safeSend(ws, { type: 'error', message: 'session not found, unsigned, or already started' });
     ws.close();
     return;
   }
   ctx.started = true;
+  ws.on('close', () => sessions.delete(id));
 
-  // One-way isolation: ignore anything the client sends during generation.
-  ws.on('message', () => {});
-
-  const p = ctx.params;
-  const trialsPerSec = p.bitRatePerSec / p.trialBits;
-  const tickMs = FAST ? 0 : Math.round((1000 * p.checkpointEveryTrials) / trialsPerSec);
-
-  ws.send(JSON.stringify({ type: 'started', tickMs, sessionSeconds: p.sessionSeconds }));
-
-  generateAndSeal(ctx, store, {
-    tickMs,
-    blobDir,
-    onCheckpoint: (c) => safeSend(ws, { type: 'checkpoint', ...c }),
-  })
-    .then((seal) => {
-      const payload = seal.payload as { ones: number; nSamples: number; outputCommitment: string; rawBlobRef: string };
-      safeSend(ws, {
-        type: 'seal',
-        sessionId: ctx.sessionId,
-        anchor: ctx.anchor,
-        ones: payload.ones,
-        nSamples: payload.nSamples,
-        outputCommitment: payload.outputCommitment,
-        rawBlobRef: payload.rawBlobRef,
-        openEntryHash: ctx.open!.entryHash,
-        sealEntryHash: seal.entryHash,
-      });
-    })
-    .catch((err) => safeSend(ws, { type: 'error', message: String(err) }))
-    .finally(() => {
-      sessions.delete(id);
+  // Dispatch to the kind's generation/reveal protocol (spec §10). Micro-PK is a
+  // one-way stream; other kinds (e.g. precognition) register their own handler.
+  switch (ctx.experiment.kind) {
+    case 'micro-pk-binary':
+      streamMicroPk(ws, ctx, store, { blobDir, fast: FAST });
+      break;
+    default:
+      safeSend(ws, { type: 'error', message: `no runner for kind "${ctx.experiment.kind}"` });
       ws.close();
-    });
-}
-
-function safeSend(ws: WebSocket, obj: unknown): void {
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
+  }
 }
 
 /**

@@ -40,9 +40,9 @@ function render(s: GlobalStats): HTMLElement[] {
     el('div', { class: 'stat-row' }, [
       stat(String(s.sealed), 'sealed sessions'),
       stat(s.totalBits.toLocaleString(), 'bits generated'),
-      stat(fmtZ(s.byIntention.HIGH.meanZ), 'HIGH mean z'),
-      stat(fmtZ(s.byIntention.LOW.meanZ), 'LOW mean z'),
-      stat(s.highMinusLow === null ? '—' : fmtZ(s.highMinusLow), 'HIGH − LOW'),
+      // Mean display-z per committed choice, over whatever vocabulary the corpus holds.
+      ...Object.entries(s.byChoice).map(([choice, st]) => stat(fmtZ(st.meanZ), `${choice} mean z`)),
+      ...(s.highMinusLow !== null ? [stat(fmtZ(s.highMinusLow), 'HIGH − LOW')] : []),
     ]),
   ]);
 
@@ -75,7 +75,7 @@ function table(rows: SessionSummary[]): HTMLElement {
       el('a', { class: 'rowlink', href: `/verify?session=${r.sessionId}`, 'data-link': true }, [
         el('span', { class: 'rank' }, `#${i + 1}`),
         el('span', { class: 'mono anchorcell' }, r.anchor),
-        el('span', { class: 'badge' }, r.intention),
+        el('span', { class: 'badge' }, r.choice || '—'),
         el('span', { class: `z ${Math.abs(r.zDisplay ?? 0) > 2 ? 'warn' : ''}` }, fmtZ(r.zDisplay)),
         el('span', { class: 'faint mono' }, shortKey(r.operatorPubKey)),
         el('span', { class: 'go' }, 'verify →'),

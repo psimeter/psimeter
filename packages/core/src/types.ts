@@ -9,6 +9,22 @@
 /** Intention declared before a micro-PK run (spec D3 — tripolar protocol). */
 export type Intention = 'HIGH' | 'LOW' | 'BASELINE';
 
+/**
+ * The class of experiment a definition describes (spec §10). The provenance
+ * spine (commit → sign → beacon → Merkle → ledger → anchor) is shared across
+ * kinds; only the choice vocabulary, the generation/reveal protocol, and the
+ * scoring differ. See `kinds.ts`.
+ */
+export type ExperimentKind = 'micro-pk-binary' | 'precognition-presentiment';
+
+/**
+ * A committed operator decision, generically. For micro-PK it is an `Intention`
+ * (HIGH/LOW/BASELINE); for precognition it is the id of a chosen option. Always
+ * a member of the experiment definition's choice vocabulary
+ * (see `choiceVocabulary`). Stored as a string so the commitment is kind-agnostic.
+ */
+export type Choice = string;
+
 /** Physical/logical class of an entropy source (spec D1). */
 export type EntropyKind = 'os' | 'cpu-rdseed' | 'usb-trng' | 'qrng';
 

@@ -7,7 +7,10 @@
 
 import type { LedgerEntry, ExperimentDefinition, BeaconRef } from '@psymeter/core';
 
+/** Micro-PK intention (spec D3). A specific choice vocabulary; see `Choice`. */
 export type Intention = 'HIGH' | 'LOW' | 'BASELINE';
+/** A committed operator decision, generically (micro-PK intention, precog option id). */
+export type Choice = string;
 
 export interface EntropyGrade {
   id: string;
@@ -15,7 +18,11 @@ export interface EntropyGrade {
   confirmatory: boolean;
 }
 
-export interface SessionParams {
+/** Frozen, content-hashed parameter set — shape varies by kind; cast per runner. */
+export type ExperimentParams = Record<string, number | string>;
+
+/** The micro-PK integer parameter set (cast from ExperimentParams in its runner). */
+export interface MicroPkParams {
   trialBits: number;
   bitRatePerSec: number;
   sessionSeconds: number;
@@ -31,8 +38,8 @@ export interface CreatedSession {
   precommit: string;
   anchor: string;
   experiment: { id: string; version: number; title: string };
-  params: SessionParams;
-  intention: Intention;
+  params: ExperimentParams;
+  intention: Choice;
   entropy: EntropyGrade;
   signPath: string;
   wsPath: string;
@@ -57,7 +64,8 @@ export type StreamMessage = Started | Checkpoint | Seal | StreamError;
 export interface CreateSessionRequest {
   experimentId: string;
   version: number;
-  intention: Intention;
+  /** Committed choice. JSON key stays `intention` for canonical-hash parity. */
+  intention: Choice;
   operatorPubKey: string;
 }
 
@@ -120,7 +128,8 @@ export interface OpenPayload {
   sessionId: string;
   experimentId: string;
   experimentVersion: number;
-  intention: Intention;
+  /** Committed choice (micro-PK intention; '' when per-trial, e.g. precog). */
+  intention: Choice;
   operatorPubKey: string;
   operatorSig: string;
   beacon: BeaconRef;
@@ -145,35 +154,40 @@ export interface SessionSummary {
   sessionId: string;
   experimentId: string;
   experimentVersion: number;
-  intention: Intention;
+  /** Committed choice for display/grouping (was `intention`). */
+  choice: Choice;
   operatorPubKey: string;
   anchor: string;
   beaconRound: number;
   entropy: { id: string; confirmatory: boolean };
   ts: string;
   sealed: boolean;
-  ones: number | null;
+  /** Micro-PK volume (bits); null for kinds without a bit stream. */
   nSamples: number | null;
+  /** Precognition volume; null for kinds without forced-choice trials. */
+  trials: number | null;
+  hits: number | null;
   zDisplay: number | null;
 }
 
-export interface IntentionStat { n: number; meanZ: number | null; }
+export interface ChoiceStat { n: number; meanZ: number | null; }
 
 export interface ExperimentInfo {
   id: string;
   version: number;
   title: string;
-  kind: string;
+  kind: ExperimentDefinition['kind'];
   params: Record<string, unknown>;
-  intentions: Intention[];
-  stats: { sessions: number; sealed: number; byIntention: Record<Intention, number> };
+  choices: Choice[];
+  stimuli: Record<string, unknown> | null;
+  stats: { sessions: number; sealed: number; byChoice: Record<string, number> };
 }
 
 export interface GlobalStats {
   sessions: number;
   sealed: number;
   totalBits: number;
-  byIntention: Record<Intention, IntentionStat>;
+  byChoice: Record<string, ChoiceStat>;
   anomalies: { z2: number; z3: number; expectedZ2: number; expectedZ3: number };
   highMinusLow: number | null;
   extremes: SessionSummary[];

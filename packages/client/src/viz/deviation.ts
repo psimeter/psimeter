@@ -8,7 +8,7 @@
 // never affect the statistics (§8.6).
 
 import * as THREE from 'three';
-import type { SessionParams } from '../api';
+import type { MicroPkParams } from '../api';
 
 const ENVELOPE_K = 3; // vertical extent = ±3σ at end of session
 
@@ -44,7 +44,7 @@ export class DeviationViz {
   }
 
   /** Lay out axes + envelopes for a given experiment's parameters. */
-  build(params: SessionParams): void {
+  build(params: MicroPkParams): void {
     this.clearScene();
     this.nBits = params.bitsPerSession;
     const maxSigma = Math.sqrt(this.nBits * 0.25);

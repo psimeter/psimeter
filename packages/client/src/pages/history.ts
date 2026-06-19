@@ -56,7 +56,7 @@ function list(rows: SessionSummary[]): HTMLElement {
     wrap.append(
       el('a', { class: 'rowlink', href: `/verify?session=${r.sessionId}`, 'data-link': true }, [
         el('span', { class: 'mono anchorcell' }, r.anchor),
-        el('span', { class: 'badge' }, r.intention),
+        el('span', { class: 'badge' }, r.choice || '—'),
         el('span', { class: `z ${Math.abs(r.zDisplay ?? 0) > 2 ? 'warn' : ''}` }, fmtZ(r.zDisplay)),
         el('span', { class: 'faint' }, r.sealed ? 'sealed' : 'open'),
         el('span', { class: 'faint nowrap' }, new Date(r.ts).toLocaleDateString()),

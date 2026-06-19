@@ -13,3 +13,4 @@ export * from './experiment.js';
 export * from './commitment.js';
 export * from './ledger.js';
 export * from './scoring.js';
+export * from './kinds.js';

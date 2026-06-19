@@ -5,10 +5,15 @@ import {
   sha256,
   MerkleAccumulator,
   buildPrecommit,
+  commitHash,
   experimentHash,
+  choiceVocabulary,
+  isValidChoice,
   appendEntry,
   verifyChain,
   sessionZ,
+  hitRateZ,
+  displayZFromSeal,
   stoufferZ,
   type ExperimentDefinition,
   type PrecommitInput,
@@ -63,6 +68,26 @@ test('experiment hash changes when any parameter changes', () => {
   assert.notEqual(experimentHash(exp), experimentHash({ ...exp, params: { trialBits: 201 } }));
 });
 
+// Hash-drift guard (D13): adding the optional `choices`/`stimuli` fields to the
+// TYPE must not change the hash of a definition that omits them — canonicalize
+// drops undefined keys, so existing sealed micro-PK sessions keep verifying.
+test('experiment hash is unchanged by omitted optional fields', () => {
+  const withUndefined = { ...exp, choices: undefined, stimuli: undefined } as ExperimentDefinition;
+  assert.equal(experimentHash(withUndefined), experimentHash(exp));
+});
+
+// ---------- choice vocabulary (kind-agnostic) ----------
+test('choiceVocabulary reads intentions (micro-PK) or choices (other kinds)', () => {
+  assert.deepEqual(choiceVocabulary(exp), ['HIGH', 'LOW', 'BASELINE']);
+  const precog: ExperimentDefinition = {
+    id: 'precognition-presentiment', version: 1, title: 'p',
+    kind: 'precognition-presentiment', params: {}, choices: ['A', 'B'],
+  };
+  assert.deepEqual(choiceVocabulary(precog), ['A', 'B']);
+  assert.ok(isValidChoice(precog, 'A') && !isValidChoice(precog, 'Z'));
+  assert.ok(isValidChoice(exp, 'HIGH') && !isValidChoice(exp, 'A'));
+});
+
 // ---------- pre-commitment + anchor ----------
 const baseInput: PrecommitInput = {
   experimentId: 'binary-micropk',
@@ -78,6 +103,14 @@ const baseInput: PrecommitInput = {
 
 test('precommit is deterministic', () => {
   assert.equal(buildPrecommit(baseInput).precommit, buildPrecommit(baseInput).precommit);
+});
+
+// Golden vectors (D13 / cross-language parity): if either of these changes, the
+// canonical form drifted and EVERY previously sealed session would stop
+// verifying. They must only ever change with a deliberate, versioned migration.
+test('experimentHash + precommit match frozen golden vectors', () => {
+  assert.equal(experimentHash(exp), 'sha256:ab17b4de0bb85f1e8ccc0fd8c1b357cf044087a79e0df358959b37a6fcc96d07');
+  assert.equal(buildPrecommit(baseInput).precommit, 'sha256:b227153c997510ed4ea20331c4ff6b4e9482c0997d2d46d7568d84c5c275595e');
 });
 
 test('precommit changes if the declared intention changes (tamper-evident)', () => {
@@ -115,4 +148,26 @@ test('session z is 0 at exactly 50%', () => {
 
 test('stouffer combines independent z-scores', () => {
   assert.ok(Math.abs(stoufferZ([1, 1, 1, 1]) - 2) < 1e-9);
+});
+
+test('hit-rate z is 0 at the chance rate and positive above it', () => {
+  assert.ok(Math.abs(hitRateZ(50, 100, 0.5)) < 1e-9); // exactly chance
+  assert.ok(hitRateZ(60, 100, 0.5) > 0); // above chance
+  // 2-of-2-options, 20 trials, 15 hits: z = (15-10)/sqrt(20*0.25) = 5/sqrt(5)
+  assert.ok(Math.abs(hitRateZ(15, 20, 0.5) - 5 / Math.sqrt(5)) < 1e-9);
+});
+
+test('displayZFromSeal dispatches on payload shape (micro-PK vs precog)', () => {
+  assert.ok(Math.abs(displayZFromSeal({ ones: 90000, nSamples: 180000 })!) < 1e-9);
+  assert.ok(Math.abs(displayZFromSeal({ hits: 10, trials: 20, optionsPerTrial: 2 })!) < 1e-9);
+  assert.ok(displayZFromSeal({ hits: 15, trials: 20, optionsPerTrial: 2 })! > 0);
+  assert.equal(displayZFromSeal(null), null);
+  assert.equal(displayZFromSeal({ unrelated: 1 }), null);
+});
+
+// ---------- generic content commitment (precog trials, spec §7.5) ----------
+test('commitHash equals sha256 of the canonical form and is order-independent', () => {
+  const v = { sessionId: 's1', trialIndex: 0, choice: 'A', targetRound: 42 };
+  assert.equal(commitHash(v), sha256(canonicalize(v)));
+  assert.equal(commitHash({ b: 1, a: 2 }), commitHash({ a: 2, b: 1 }));
 });
