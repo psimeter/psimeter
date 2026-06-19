@@ -1,4 +1,4 @@
-// Landing page: the hook. A showy, high-energy pitch that dares a stranger to
+﻿// Landing page: the hook. A showy, high-energy pitch that dares a stranger to
 // test their mind — wrapped around an honest fine-print line so the claim never
 // overreaches (the rigor protects against self-deception). Mounts an ambient
 // three.js "network" animation behind the content and tears it down on navigate.
@@ -17,32 +17,32 @@ export function renderHome(outlet: HTMLElement): Disposer {
       veil,
       el('div', { class: 'page home-page' }, [
         el('section', { class: 'hero' }, [
-          el('span', { class: 'eyebrow' }, 'Free · anonymous · ~3 minutes'),
-          el('h1', {}, ['Can your mind bend ', el('span', { class: 'grad' }, 'pure randomness'), '?']),
+          el('span', { class: 'eyebrow' }, 'Free · anonymous · no sign-up'),
+          el('h1', {}, ['Can your mind ', el('span', { class: 'grad' }, 'beat chance'), '?']),
           el('p', { class: 'lede' },
-            'Deep inside a chip, a true random source flickers — uncaused, unpredictable, beyond anything physics says you should be able to touch. The challenge: think at it, and see if the numbers flinch.'),
+            'PsyMeter is an open platform of experiments built around one old, unsettled question: can a person, by intention alone, influence — or foresee — a genuinely physical random process? The randomness is real (quantum and thermal noise, not a pseudo-random algorithm), and every result is sealed before it exists, so anyone can check it. Pick an experiment and find out.'),
           el('div', { class: 'cta-row' }, [
-            el('a', { class: 'btn primary lg', href: '/run', 'data-link': true }, 'Test your mind →'),
-            el('a', { class: 'btn lg ghost', href: '/about', 'data-link': true }, 'How is this real?'),
+            el('a', { class: 'btn primary lg', href: '/run', 'data-link': true }, 'Run an experiment →'),
+            el('a', { class: 'btn lg ghost', href: '/about', 'data-link': true }, 'How it works'),
           ]),
           el('p', { class: 'hero-note' },
-            'No sign-up. No app. Pick a direction, focus, and watch the live feed react.'),
+            'No sign-up. No app. Different experiments, one promise: make your call, then watch the live feed react.'),
         ]),
 
         el('div', { class: 'pillars' }, [
           pillar('◆', 'Locked before you start',
             'Your call is frozen and cryptographically sealed before a single random bit exists. No takebacks, no fudging — not even by us.'),
-          pillar('→', 'It can’t see you',
+          pillar('→', 'It can\'t see you',
             'The generator never reads your screen. The feed is one-way, so there is no back channel to game. The isolation is built in, not promised.'),
           pillar('✓', 'Check it yourself',
-            'Every run lands in a public, tamper-evident ledger. Don’t believe the result? Re-run the math on the raw data and get the same numbers.'),
+            'Every run lands in a public, tamper-evident ledger. Don\'t believe the result? Re-run the math on the raw data and get the same numbers.'),
         ]),
 
         el('p', {
           class: 'faint',
           style: 'text-align:center;margin:38px auto 0;max-width:64ch;position:relative;z-index:2',
         },
-          'Straight talk: one session is a game, never proof — extraordinary streaks happen by luck alone. The actual science lives in a pre-registered aggregate across thousands of people. You’re here to play; the data takes care of itself.'),
+          'One session is not evidence — by pure chance, some runs will look remarkable, and in a large study that\'s expected. The real science is a pre-registered aggregate across many sessions. Your score today is just a score; the data accumulates on its own.'),
       ]),
     ]),
   );

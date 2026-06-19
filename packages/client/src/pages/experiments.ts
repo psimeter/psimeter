@@ -15,6 +15,8 @@ export function renderExperiments(outlet: HTMLElement): Disposer {
         el('span', { class: 'eyebrow' }, 'Experiments'),
         el('h1', {}, 'Available experiments'),
       ]),
+      el('p', { class: 'section-lede' },
+        'PsyMeter probes one question — can the mind influence or foresee genuinely random events? — through several experiments, each a different angle on it. Every experiment runs on the same verifiable, pre-committed protocol. Here\'s what\'s live so far:'),
       body,
     ]),
   );

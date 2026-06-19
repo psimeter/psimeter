@@ -1,4 +1,4 @@
-// About / how it works (spec §10, section 1).
+﻿// About / how it works (spec §10, section 1).
 //
 // Two jobs, one page (the §10 brief):
 //   1. A friendly TL;DR for a curious stranger who is not a scientist.
@@ -17,11 +17,11 @@ const CHAIN: Step[] = [
     n: '1',
     title: 'Commit before any randomness exists',
     body: [
-      'You pick a direction. Before generating a single bit, the server freezes your choice, the exact experiment parameters, your public key, and a fresh public-randomness value into one hash — the ',
+      'You make your call — the direction you intend to push, or the target you predict, depending on the experiment. Before any randomness exists, the server freezes your choice, the exact experiment parameters, your public key, and a fresh public-randomness value into one hash — the ',
       el('strong', {}, 'pre-commitment'),
       ' — and shows you a short fingerprint of it: the ',
       el('strong', {}, 'anchor'),
-      '. Your browser signs the pre-commitment with a key only you hold. The experimenter can now never change what you committed to, and you can never deny it.',
+      '. Your browser signs the pre-commitment with a key only you hold. The experimenter cannot alter what you chose, and you cannot deny having chosen it — the signature proves both.',
     ],
   },
   {
@@ -30,7 +30,7 @@ const CHAIN: Step[] = [
     body: [
       'That fresh value comes from ',
       el('strong', {}, 'drand'),
-      ', a public randomness beacon that publishes a new, unpredictable number every few seconds (and we verify its BLS signature in-process). Because it did not exist until moments before your run, your session provably could not have been pre-computed and cherry-picked from a library of flattering results.',
+      ', a public randomness beacon that publishes a new, unpredictable value every few seconds (we verify its BLS signature in-process). Because it didn\'t exist until moments before your run, your session cannot have been precomputed or selected from a pool of favorable results.',
     ],
   },
   {
@@ -75,10 +75,10 @@ const CHAIN: Step[] = [
 
 interface Tldr { ico: string; title: string; body: string; }
 const TLDR: Tldr[] = [
-  { ico: '🎯', title: 'What you do', body: 'Choose HIGH, LOW, or just observe. Focus on the glowing anchor for ~3 minutes while a true random stream ticks past, and watch whether it drifts your way.' },
-  { ico: '🔬', title: 'What we’re asking', body: 'Can intention alone nudge a genuinely random physical process — or let you anticipate it? It’s an old, controversial question. We test it at scale, in the open.' },
-  { ico: '🔒', title: 'Why you can trust it', body: 'You don’t have to. Every result is locked in advance and verifiable from public data by anyone — the people running the experiment are treated as untrusted.' },
-  { ico: '⚖️', title: 'What a result means', body: 'A single hot run is fun, not proof — luck alone produces those. The science is the pre-registered aggregate over thousands of sessions, against a calibrated baseline.' },
+  { ico: '🎯', title: 'What you do', body: 'It depends on the experiment: push a live stream of random bits up or down by intention, or call a target before it exists. Either way you lock your choice in first, then watch the run unfold against what chance predicts.' },
+  { ico: '🔬', title: 'The question', body: 'Whether intention alone can shift the output of a genuinely physical random process — or let you anticipate one. Each experiment is a different angle on that question. Researchers have studied it seriously for decades. We run the tests in public, with all data available.' },
+  { ico: '🔒', title: 'Why you can trust it', body: 'You don\'t need to take our word for it. Every result is sealed before any randomness is generated, and anyone can verify it independently from the public data — including people who assume we\'re lying.' },
+  { ico: '⚖️', title: 'What a result means', body: 'A single good run is probably luck — extreme results happen by chance all the time. The actual science is the pre-registered aggregate across many sessions, measured against the generator\'s own baseline behavior.' },
 ];
 
 interface Source { tag: string; name: string; body: string; cls: string; }
@@ -106,7 +106,7 @@ export function renderAbout(outlet: HTMLElement): void {
         el('span', { class: 'eyebrow' }, 'How it works'),
         el('h1', {}, 'You don’t have to trust us'),
         el('p', { class: 'lede' },
-          'PsyMeter tests a simple, old, and controversial question: can a person, by intention alone, nudge the output of a truly random process — or anticipate one before it happens? Claims like these live or die on their methodology. So the whole platform is built around one rule:'),
+          'PsyMeter tests a question that researchers have argued about seriously for decades: can a person, by intention alone, shift the output of a genuinely random process — or anticipate one? Claims in this area have a long history of not surviving scrutiny. So the platform is built around one principle:'),
         el('p', { class: 'rule' },
           'The experimenter is treated as an untrusted party, and every result is verifiable from public artifacts by a skeptic who trusts no one.'),
         el('div', { class: 'audience-hint' }, [
@@ -116,7 +116,7 @@ export function renderAbout(outlet: HTMLElement): void {
       ]),
 
       // ---- TL;DR ---------------------------------------------------------
-      el('h2', { class: 'about-h2' }, 'In 30 seconds'),
+      el('h2', { class: 'about-h2' }, 'The short version'),
       el('div', { class: 'tldr-grid' }, TLDR.map((t) =>
         el('div', { class: 'tldr card' }, [
           el('div', { class: 'tldr-ico' }, t.ico),
@@ -124,10 +124,35 @@ export function renderAbout(outlet: HTMLElement): void {
           el('p', {}, t.body),
         ]))),
 
-      // ---- chain of evidence --------------------------------------------
-      el('h2', { class: 'about-h2' }, 'The chain of evidence'),
+      // ---- the family of experiments ------------------------------------
+      el('h2', { class: 'about-h2' }, 'One platform, many experiments'),
       el('p', { class: 'section-lede' },
-        'Every session walks the same path. Each step closes off a way the experimenter could cheat — or fool themselves:'),
+        'PsyMeter isn\'t a single test — it\'s a growing set of experiments, each probing the same question from a different direction. They fall into two families:'),
+      el('div', { class: 'twocol' }, [
+        el('div', { class: 'card' }, [
+          el('h3', {}, 'Influence — micro-psychokinesis'),
+          el('p', {}, [
+            'You try to bias a live physical random process while it runs. The first one, ',
+            el('strong', {}, 'binary micro-PK'),
+            ', is live now: choose HIGH or LOW and hold it in mind while a stream of random bits is generated, and the feed shows whether the running total drifts your way.',
+          ]),
+        ]),
+        el('div', { class: 'card' }, [
+          el('h3', {}, 'Foresight — forced-choice precognition'),
+          el('p', {}, [
+            'You commit a choice ',
+            el('em', {}, 'before'),
+            ' the target exists — bound to a future public-beacon round that hasn\'t been published yet — then the target is revealed and scored. A two-color version is the next experiment to land (spec §7.5).',
+          ]),
+        ]),
+      ]),
+      el('p', { class: 'section-lede' },
+        'Whatever the task, the same trust machinery wraps every experiment, and each has its own pre-registered analysis. Here is the sequence that protects each run:'),
+
+      // ---- chain of evidence --------------------------------------------
+      el('h2', { class: 'about-h2' }, 'How a session works'),
+      el('p', { class: 'section-lede' },
+        'Every session — in any experiment — follows the same sequence. Each step closes off a way the result could be manipulated, by the experimenter or anyone else:'),
       el('div', { class: 'chain-grid' }, CHAIN.map((s) =>
         el('div', { class: 'chain-card card' }, [
           el('div', { class: 'n' }, s.n),
@@ -138,15 +163,15 @@ export function renderAbout(outlet: HTMLElement): void {
       el('div', { class: 'callout big-callout' }, [
         el('div', { class: 'callout-mark' }, '◎'),
         el('div', {}, [
-          el('strong', {}, 'The anchor is the heart of it. '),
-          'It is the short fingerprint of everything you committed to before the randomness existed. Screenshot it: it is your independent proof of exactly what you predicted, and when. During a run it doubles as your concentration target — the thing you hold in mind.',
+          el('strong', {}, 'The anchor. '),
+          'A short fingerprint of everything you committed to before any randomness existed. Screenshot it — it\'s your independent record of exactly what you predicted and when, verifiable without the server. During the run, it\'s also your focus target.',
         ]),
       ]),
 
       // ---- what a result means ------------------------------------------
-      el('h2', { class: 'about-h2' }, 'What a result means — and what it doesn’t'),
+      el('h2', { class: 'about-h2' }, 'What a result means — and what it doesn\'t'),
       el('p', { class: 'section-lede' },
-        'This is where most psi claims go wrong, so we are blunt about it. With millions of sessions, extreme-looking individual runs are guaranteed by chance, even if no effect exists at all.'),
+        'This is where most psi claims go wrong. With many sessions in the database, extreme-looking individual runs are guaranteed by chance alone — the question is whether the aggregate pattern exceeds what chance predicts.'),
       el('div', { class: 'twocol' }, [
         el('div', { class: 'col-bad card' }, [
           el('h3', {}, ['✕ ', 'Not evidence']),
@@ -171,9 +196,11 @@ export function renderAbout(outlet: HTMLElement): void {
         el('span', { class: 'eyebrow' }, 'For skeptics & scientists'),
         el('h2', { class: 'about-h2 first' }, 'The methodology, in full'),
         el('p', { class: 'section-lede' },
-          'The platform exists to be attacked. Everything below is fixed in the open specification and decision log; here is the part that matters for poking holes.'),
+          'Everything below is fixed in the open specification and decision log. Here\'s the part that matters if you\'re looking for weaknesses.'),
 
         el('h3', { class: 'rigor-h3' }, 'Two pre-registered hypotheses'),
+        el('p', { class: 'section-lede' },
+          'These are the confirmatory hypotheses for the influence (micro-PK) experiments. Foresight experiments are scored on a pre-registered hit-rate against the same calibrated null; each experiment type registers its analysis before its data exists.'),
         el('div', { class: 'twocol' }, [
           el('div', { class: 'hyp card' }, [
             el('span', { class: 'badge' }, 'H1'),
@@ -227,7 +254,7 @@ export function renderAbout(outlet: HTMLElement): void {
         'PsyMeter is open source — protocol, code, pre-registration, and (eventually) the full raw dataset. The point is not to be believed. The point is to be ',
         el('strong', {}, 'checked'),
         '. Ready to try it? ',
-        el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run a session →'),
+        el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run an experiment →'),
       ]),
     ]),
   );

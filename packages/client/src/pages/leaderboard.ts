@@ -16,6 +16,8 @@ export function renderLeaderboard(outlet: HTMLElement): Disposer {
         el('span', { class: 'eyebrow' }, 'Leaderboard'),
         el('h1', {}, 'Aggregate & leaderboard'),
       ]),
+      el('p', { class: 'section-lede' },
+        'Live totals across the influence (binary micro-PK) experiment. As more experiments come online, each will report its own aggregate here.'),
       el('div', { class: 'callout warn' }, [
         el('strong', {}, 'Read this first. '),
         'With enough sessions, extreme-looking runs are guaranteed by chance even with no real effect. This page is for engagement and transparency — it is not evidence. The science is the pre-registered aggregate against a calibrated null (',
