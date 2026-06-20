@@ -37,7 +37,14 @@ export async function getOperatorPubKey(): Promise<string> {
 
 /** Sign the server's pre-commitment with the operator private key (spec §7.2). */
 export async function signPrecommit(precommit: string): Promise<string> {
-  const sig = await ed.signAsync(new TextEncoder().encode(precommit), privateKey());
+  return signMessage(precommit);
+}
+
+/** Sign an arbitrary UTF-8 message with the operator private key. Used for the
+ *  psi-candidate contact challenge (D15): the signature proves this browser holds
+ *  the key whose public score earned eligibility. */
+export async function signMessage(message: string): Promise<string> {
+  const sig = await ed.signAsync(new TextEncoder().encode(message), privateKey());
   return `ed25519:${toHex(sig)}`;
 }
 

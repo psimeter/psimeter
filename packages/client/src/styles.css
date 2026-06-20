@@ -491,6 +491,55 @@ body.focus .site-footer { display: none; }
 
 .center-card { text-align: center; display: grid; gap: 14px; place-items: center; padding: 36px; }
 
+/* ---------- psi score (spec D15) ---------- */
+.psi-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
+  padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--text-dim); background: var(--bg-2); white-space: nowrap;
+}
+.psi-badge.tier-0 { color: var(--text-faint); }
+.psi-badge.tier-1 { color: var(--text-dim); border-color: #2c3a4c; }
+.psi-badge.tier-2 { color: var(--accent-bright); border-color: #2c477a; background: rgba(110, 168, 254, 0.08); }
+.psi-badge.tier-3 { color: var(--warn-soft); border-color: #7a5a18; background: rgba(255, 180, 84, 0.07); }
+.psi-badge.tier-4, .psi-badge.candidate { color: var(--good); border-color: #1f5c46; background: rgba(89, 211, 163, 0.09); }
+.psi-badge.candidate { box-shadow: 0 0 15px -2px rgba(89, 211, 163, 0.5); }
+
+.psi-ladder { margin-top: 14px; }
+.psi-bar { height: 8px; border-radius: 999px; background: var(--bg-3); border: 1px solid var(--line); overflow: hidden; }
+.psi-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); transition: width .45s ease; }
+.psi-fill.candidate { background: linear-gradient(90deg, var(--good), #8be8c4); }
+.psi-ladder-foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; }
+
+.psi-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: var(--bg-1); color: var(--text); font-size: 13.5px; }
+.psi-row.me { background: var(--accent-deep); }
+.psi-row .rank { width: 30px; color: var(--text-faint); font-family: var(--mono); }
+.psi-pts { min-width: 42px; text-align: right; font-family: var(--mono); font-size: 20px; color: var(--text); }
+.psi-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.psi-who-top { display: flex; align-items: center; }
+.psi-who .mono { font-size: 13px; }
+.psi-sub { font-size: 11.5px; }
+.psi-row .z { min-width: 56px; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.you-tag { margin-left: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); border: 1px solid #2c477a; border-radius: 999px; padding: 1px 7px; }
+
+.psi-head { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
+.psi-score-num { font-family: var(--mono); font-size: 52px; line-height: 1; font-weight: 650; color: var(--text); }
+.psi-panel .lbl { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 2px; }
+.psi-meta { display: flex; flex-direction: column; gap: 10px; }
+.stat-row.tight { gap: 12px 22px; }
+
+.psi-candidate { border: 1px solid #1f5c46; box-shadow: inset 0 0 0 1px rgba(89, 211, 163, 0.08); }
+.psi-candidate-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fld { width: 100%; background: var(--bg-2); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; }
+.fld:focus { outline: none; border-color: var(--accent); }
+textarea.fld { resize: vertical; }
+.fld-row { display: block; margin-top: 12px; }
+.fld-lbl { display: block; margin-bottom: 5px; font-size: 12px; color: var(--text-dim); }
+.consent { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
+.consent input { margin-top: 3px; }
+.good-text { color: var(--good) !important; }
+.danger-text { color: var(--danger) !important; }
+
 /* verification view */
 .verdict { display: flex; align-items: center; gap: 22px; padding: 20px 22px; border-radius: var(--radius-lg);
   border: 1px solid var(--line); background: var(--bg-1); flex-wrap: wrap; }

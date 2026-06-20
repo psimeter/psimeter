@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import statistics
 import sys
 from pathlib import Path
 
@@ -92,6 +93,108 @@ def phi(z: float) -> float:
 
 def stouffer(zs: list[float]) -> float:
     return sum(zs) / math.sqrt(len(zs))
+
+
+# ---- psi score: anytime-valid per-operator e-value (spec D15 / H1) ----
+# Mirror of packages/core/src/psi.ts. The grid + thresholds are frozen and MUST
+# match the TypeScript byte-for-byte; this is the AUTHORITATIVE recomputation over
+# the published ledger (the on-screen score is display-only, §8.1 / D12).
+
+PSI_ALT_GRID = (0.1, 0.2, 0.4, 0.8)
+PSI_CANDIDATE_WEALTH = 1000.0
+PSI_CANDIDATE_MIN_SESSIONS = 5
+PSI_TIERS = ((0.0, "Baseline"), (3.0, "Flicker"), (10.0, "Signal"),
+             (100.0, "Strong signal"), (PSI_CANDIDATE_WEALTH, "Candidate"))
+
+
+def directional_z(choice: str, z):
+    """Mirror of directionalZ in psi.ts: HIGH→+z, LOW→−z, BASELINE/unknown→None,
+    '' (per-trial kinds, e.g. precognition) already oriented → +z."""
+    if z is None:
+        return None
+    if choice == "HIGH":
+        return z
+    if choice == "LOW":
+        return -z
+    if choice == "BASELINE":
+        return None
+    if choice == "":
+        return z
+    return None
+
+
+def psi_score(dirzs: list[float]) -> dict:
+    """Test-martingale wealth W = mean_j exp(δ_j·S − n·δ_j²/2) over the one-sided
+    grid, accumulated in log-space. Under H0 W is a martingale with E[W]=1, so by
+    Ville P(sup W ≥ 1/α) ≤ α — valid under the operator's live optional stopping."""
+    n = len(dirzs)
+    s = sum(dirzs)
+    if n == 0:
+        log_w = 0.0
+    else:
+        log_weight = -math.log(len(PSI_ALT_GRID))
+        logs = [log_weight + d * s - n * d * d / 2 for d in PSI_ALT_GRID]
+        m = max(logs)
+        log_w = m + math.log(sum(math.exp(x - m) for x in logs))
+    wealth = math.exp(log_w)
+    points = max(0, math.floor(10 * log_w / math.log(10) + 0.5))  # JS Math.round parity
+    anytime_p = min(1.0, math.exp(-log_w))
+    sigma = 0.0 if anytime_p >= 1 else max(0.0, statistics.NormalDist().inv_cdf(1 - anytime_p))
+    tier = 0
+    for i, (mn, _name) in enumerate(PSI_TIERS):
+        if wealth >= mn:
+            tier = i
+    reached = wealth >= PSI_CANDIDATE_WEALTH
+    is_candidate = reached and n >= PSI_CANDIDATE_MIN_SESSIONS
+    if reached and not is_candidate:
+        tier = len(PSI_TIERS) - 2
+    return {"n": n, "sumZ": s, "wealth": wealth, "points": points, "anytimeP": anytime_p,
+            "sigma": sigma, "tier": tier, "tierName": PSI_TIERS[tier][1], "isCandidate": is_candidate}
+
+
+def seal_display_z(seal: dict):
+    """Per-session display z from a seal payload, dispatched by shape (mirror of
+    displayZFromSeal): micro-PK ones/nSamples, precognition hits/trials."""
+    if "ones" in seal and seal.get("nSamples"):
+        return session_z(seal["ones"], seal["nSamples"])
+    if "hits" in seal and seal.get("trials"):
+        return hit_rate_z(seal["hits"], seal["trials"], 1 / seal["optionsPerTrial"])
+    return None
+
+
+def score_psi(seals: list[dict], opens: dict) -> None:
+    """Per-operator PSI SCORE — the public, gamified face of H1 (spec D15): one
+    anytime-valid e-value per operator over their directional per-session z across
+    all sealed sessions/kinds. Recomputed here over the published ledger so a
+    skeptic never has to trust the server's displayed score (D12)."""
+    by_operator: dict[str, list[float]] = {}
+    for s in seals:
+        op = opens.get(s["sessionId"], {}).get("payload", {})
+        d = directional_z(op.get("intention", ""), seal_display_z(s))
+        if d is not None:
+            by_operator.setdefault(op.get("operatorPubKey", "?"), []).append(d)
+    if not by_operator:
+        return
+
+    print("\npsi score - per-operator anytime-valid e-value (spec D15 / H1, SCREENING):")
+    print(f"  {'operator':12}{'scored':>7}{'points':>8}{'odds vs chance':>18}{'sigma':>8}  tier")
+    print("  " + "-" * 64)
+    ranked = sorted(by_operator.items(), key=lambda kv: psi_score(kv[1])["wealth"], reverse=True)
+    n_eligible = 0
+    for pub, dirzs in ranked:
+        ps = psi_score(dirzs)
+        if ps["n"] >= PSI_CANDIDATE_MIN_SESSIONS:
+            n_eligible += 1
+        odds = f"{ps['wealth']:,.1f} : 1" if ps["wealth"] < 1e7 else f"{ps['wealth']:.1e} : 1"
+        flag = "  <- CANDIDATE: flag for confirmatory replication" if ps["isCandidate"] else ""
+        print(f"  {pub.split(':')[-1][:10]:12}{ps['n']:>7}{ps['points']:>8}{odds:>18}{ps['sigma']:>+8.2f}  {ps['tierName']}{flag}")
+
+    # Honest look-elsewhere note: across many operators, "candidates" are expected
+    # by chance - which is exactly why a candidate must REPLICATE (spec §5, D4/D15).
+    exp_false = n_eligible / PSI_CANDIDATE_WEALTH
+    print(f"  ({n_eligible} operator(s) with >={PSI_CANDIDATE_MIN_SESSIONS} scored sessions; "
+          f"~{exp_false:.2f} false candidate(s) expected by chance at the 1/{int(PSI_CANDIDATE_WEALTH)} threshold)")
+    print("  SCREENING only: the score flags candidates; proof is a pre-registered fixed-N replication (D15).")
 
 
 def merkle_root(leaves: list[bytes]) -> str:
@@ -363,6 +466,9 @@ def main(path: str) -> int:
 
     if precog_seals:
         score_precognition(precog_seals, opens)
+
+    # Per-operator psi score across all kinds (the public leaderboard's statistic).
+    score_psi(seals, opens)
 
     dangling = [sid for sid in opens if sid not in {s["sessionId"] for s in seals}]
     if dangling:

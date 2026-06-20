@@ -1,6 +1,7 @@
 // Small shared UI bits for the data pages.
 
 import { el } from './ui';
+import type { PsiScore } from './api';
 
 export function loading(label = 'Loading…'): HTMLElement {
   return el('div', { class: 'loading' }, [el('span', { class: 'spinner' }), label]);
@@ -26,4 +27,36 @@ export function fmtZ(z: number | null): string {
 
 export function shortKey(pubKey: string): string {
   return pubKey.replace(/^ed25519:/, '').slice(0, 10);
+}
+
+// ---------- psi score (spec D15) ----------
+
+/** Odds against chance, from the test-martingale wealth (the e-value). */
+export function fmtOdds(wealth: number): string {
+  if (!isFinite(wealth)) return '∞ : 1';
+  if (wealth < 1) return 'below chance';
+  if (wealth < 1e6) return `${Math.round(wealth).toLocaleString('en-US')} : 1`;
+  return `${wealth.toExponential(1)} : 1`;
+}
+
+/** A tier chip; the "candidate" modifier glows. */
+export function psiBadge(psi: PsiScore): HTMLElement {
+  return el(
+    'span',
+    { class: `psi-badge tier-${psi.tier}${psi.isCandidate ? ' candidate' : ''}` },
+    psi.isCandidate ? `${psi.tierName} ★` : psi.tierName,
+  );
+}
+
+/** Progress bar toward the candidate threshold (30 pts = 10·log10(1000)). */
+export function psiLadder(psi: PsiScore): HTMLElement {
+  const candidatePoints = 30;
+  const pct = Math.max(0, Math.min(100, (psi.points / candidatePoints) * 100));
+  return el('div', { class: 'psi-ladder' }, [
+    el('div', { class: 'psi-bar' }, el('div', { class: `psi-fill${psi.isCandidate ? ' candidate' : ''}`, style: `width:${pct}%` })),
+    el('div', { class: 'psi-ladder-foot faint' }, [
+      el('span', {}, `${psi.points} pts`),
+      el('span', {}, psi.toNextTier ? `next: ${psi.toNextTier.name} at ${fmtOdds(psi.toNextTier.wealth)}` : 'top tier reached'),
+    ]),
+  ]);
 }

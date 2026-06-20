@@ -5,7 +5,9 @@
 // WebSocket streams checkpoints and the final seal. The socket is receive-only —
 // nothing this client sends can reach the generator (pillar 5).
 
-import type { LedgerEntry, ExperimentDefinition, BeaconRef } from '@psymeter/core';
+import type { LedgerEntry, ExperimentDefinition, BeaconRef, PsiScore } from '@psymeter/core';
+
+export type { PsiScore };
 
 /** Micro-PK intention (spec D3). A specific choice vocabulary; see `Choice`. */
 export type Intention = 'HIGH' | 'LOW' | 'BASELINE';
@@ -292,11 +294,63 @@ export async function fetchStats(): Promise<GlobalStats> {
   return (await res.json()) as GlobalStats;
 }
 
-export async function fetchSessions(operator?: string): Promise<SessionSummary[]> {
+/** History payload: the operator's sessions plus their psi score (D15), which the
+ *  server computes over ALL of them (the list itself may be display-limited). */
+export interface HistoryResult {
+  sessions: SessionSummary[];
+  psi: PsiScore | null;
+}
+
+export async function fetchSessions(operator?: string): Promise<HistoryResult> {
   const query = operator ? `?operator=${encodeURIComponent(operator)}` : '';
   const res = await fetch(`/api/sessions${query}`);
   if (!res.ok) throw new Error('could not load sessions');
-  return ((await res.json()) as { sessions: SessionSummary[] }).sessions;
+  return (await res.json()) as HistoryResult;
+}
+
+// ---------- psi leaderboard + candidate contact (spec D15 / H1) ----------
+
+export interface OperatorRanking {
+  operatorPubKey: string;
+  totalSessions: number;
+  lastTs: string;
+  psi: PsiScore;
+}
+
+export interface Leaderboard {
+  operators: OperatorRanking[];
+  meta: {
+    totalOperators: number;
+    eligibleOperators: number;
+    candidates: number;
+    candidateWealth: number;
+    candidateMinSessions: number;
+    expectedFalseCandidates: number;
+  };
+}
+
+export async function fetchLeaderboard(): Promise<Leaderboard> {
+  const res = await fetch('/api/leaderboard');
+  if (!res.ok) throw new Error('could not load leaderboard');
+  return (await res.json()) as Leaderboard;
+}
+
+export interface ContactSubmission {
+  operatorPubKey: string;
+  contact: string;
+  message: string;
+  operatorSig: string;
+}
+
+/** Submit an opt-in candidate contact. The caller signs the canonical challenge
+ *  (see history.ts) so the server can prove key custody and re-check eligibility. */
+export async function submitContact(body: ContactSubmission): Promise<void> {
+  const res = await fetch('/api/contact', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res, 'could not submit contact'));
 }
 
 export async function fetchSessionDetail(id: string): Promise<SessionDetail> {

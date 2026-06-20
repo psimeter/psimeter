@@ -17,6 +17,10 @@ import {
   derivePresentimentTarget,
   trialCommit,
   stoufferZ,
+  directionalZ,
+  psiScore,
+  psiScoreFromSessions,
+  invNormalCdf,
   type ExperimentDefinition,
   type PrecommitInput,
   type LedgerEntry,
@@ -208,4 +212,72 @@ test('trialCommit matches the frozen golden vector (cross-language parity)', () 
     trialCommit({ sessionId: 's1', trialIndex: 0, choice: 'A', targetRound: 100, prevBeaconRound: 98, operatorPubKey: 'ed25519:abc' }),
     'sha256:6ecdfac93181f0112e2654a3cec7c7cb65fc700318937a4350824d649f7d2e81',
   );
+});
+
+// ---------- psi score: anytime-valid per-operator e-value (spec D15 / H1) ----------
+
+test('directionalZ orients by declared intention; BASELINE/unknown never score', () => {
+  assert.equal(directionalZ('HIGH', 3), 3); // micro-PK: bias toward 1s
+  assert.equal(directionalZ('LOW', 3), -3); // micro-PK: bias toward 0s
+  assert.equal(directionalZ('BASELINE', 3), null); // calibration only (D5)
+  assert.equal(directionalZ('', 3), 3); // per-trial kinds (precognition): already oriented
+  assert.equal(directionalZ('HIGH', null), null); // unsealed / no z
+  assert.equal(directionalZ('whatever', 3), null); // unknown session-level vocabulary
+});
+
+test('psi score starts at exactly 1 (0 points) with no sessions', () => {
+  const s = psiScore([]);
+  assert.equal(s.scoredSessions, 0);
+  assert.ok(Math.abs(s.wealth - 1) < 1e-12);
+  assert.equal(s.points, 0);
+  assert.equal(s.sigma, 0);
+  assert.equal(s.tierName, 'Baseline');
+  assert.equal(s.isCandidate, false);
+});
+
+// Frozen golden vector: one session at directional z = 3, grid [0.1,0.2,0.4,0.8],
+// equal weights. W = mean_j exp(δ_j·3 − δ_j²/2). analyze.py must reproduce this.
+test('psi wealth matches the frozen golden vector (cross-language parity)', () => {
+  const s = psiScore([3]);
+  assert.ok(Math.abs(s.wealth - 3.5496219767564274) < 1e-9, `wealth ${s.wealth}`);
+  assert.equal(s.points, 6); // round(10·log10(3.54962))
+});
+
+test('psi is one-sided: deviation against the declared direction never scores', () => {
+  const s = psiScore([-3]);
+  assert.ok(s.wealth < 1, `wealth ${s.wealth}`);
+  assert.equal(s.points, 0); // below chance reads as 0 points, not negative
+  assert.equal(s.anytimeP, 1);
+  assert.equal(s.sigma, 0);
+});
+
+test('candidate badge needs BOTH the wealth threshold and the session floor', () => {
+  const five = psiScore([3, 3, 3, 3, 3]);
+  assert.ok(five.wealth >= 1000);
+  assert.equal(five.isCandidate, true);
+  assert.equal(five.tierName, 'Candidate');
+
+  // Same per-session strength but only 4 sessions: wealth still clears 1000, yet
+  // the badge is withheld and the tier is held one rung below.
+  const four = psiScore([3, 3, 3, 3]);
+  assert.ok(four.wealth >= 1000);
+  assert.equal(four.isCandidate, false);
+  assert.equal(four.tierName, 'Strong signal');
+});
+
+test('psiScoreFromSessions drops BASELINE/unsealed and orients HIGH/LOW', () => {
+  const s = psiScoreFromSessions([
+    { choice: 'HIGH', z: 3 },
+    { choice: 'LOW', z: -3 }, // -(-3) = +3 toward declared LOW
+    { choice: 'BASELINE', z: 5 }, // excluded
+    { choice: '', z: 2 }, // precognition
+    { choice: 'HIGH', z: null }, // unsealed
+  ]);
+  assert.equal(s.scoredSessions, 3);
+  assert.ok(Math.abs(s.sumZ - 8) < 1e-12);
+});
+
+test('invNormalCdf inverts the standard normal at known points', () => {
+  assert.ok(Math.abs(invNormalCdf(0.5)) < 1e-9);
+  assert.ok(Math.abs(invNormalCdf(0.975) - 1.959963985) < 1e-6);
 });

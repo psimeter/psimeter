@@ -1,5 +1,13 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { displayZFromSeal, type Choice, type LedgerEntry } from '@psymeter/core';
+import {
+  displayZFromSeal,
+  psiScoreFromSessions,
+  PSI_CANDIDATE_WEALTH,
+  PSI_CANDIDATE_MIN_SESSIONS,
+  type PsiScore,
+  type Choice,
+  type LedgerEntry,
+} from '@psymeter/core';
 
 /**
  * Read-only view over the append-only ledger (spec §8.5) for the public site's
@@ -183,6 +191,67 @@ export function globalStats(rows: SessionSummary[]) {
     },
     highMinusLow: hi !== null && lo !== null ? hi - lo : null,
     extremes,
+  };
+}
+
+/** One ranked operator on the psi leaderboard (spec D15). */
+export interface OperatorRanking {
+  operatorPubKey: string;
+  totalSessions: number;
+  lastTs: string;
+  psi: PsiScore;
+}
+
+/** All of an operator's sealed sessions as (choice, z) pairs for the psi score.
+ *  Unsealed rows carry z = null and are dropped by psiScoreFromSessions. */
+function operatorPairs(rows: SessionSummary[]): { choice: Choice; z: number | null }[] {
+  return rows.map((r) => ({ choice: r.choice, z: r.zDisplay }));
+}
+
+/** The psi score for one operator, recomputed from the ledger (display-only, §8.1). */
+export function psiForOperator(rows: SessionSummary[], operatorPubKey: string): PsiScore {
+  return psiScoreFromSessions(operatorPairs(rows.filter((r) => r.operatorPubKey === operatorPubKey)));
+}
+
+/**
+ * The psi leaderboard (spec D15 / H1): operators ranked by their anytime-valid
+ * test-martingale wealth. This replaces the old "most extreme sessions" list —
+ * anomalous single sessions are expected by chance (D4); sustained per-operator
+ * deviation in the declared direction is the thing worth surfacing. Still DISPLAY
+ * ONLY: analysis/analyze.py recomputes every score from the published ledger.
+ */
+export function leaderboard(rows: SessionSummary[]) {
+  const byOp = new Map<string, SessionSummary[]>();
+  for (const r of rows) {
+    const list = byOp.get(r.operatorPubKey) ?? [];
+    list.push(r);
+    byOp.set(r.operatorPubKey, list);
+  }
+  const operators: OperatorRanking[] = [];
+  for (const [operatorPubKey, sessions] of byOp) {
+    operators.push({
+      operatorPubKey,
+      totalSessions: sessions.length,
+      lastTs: sessions.reduce((m, s) => (s.ts > m ? s.ts : m), ''),
+      psi: psiScoreFromSessions(operatorPairs(sessions)),
+    });
+  }
+  // Rank by wealth (the e-value); break ties by who has scored more sessions.
+  operators.sort((a, b) => b.psi.wealth - a.psi.wealth || b.psi.scoredSessions - a.psi.scoredSessions);
+
+  const eligibleOperators = operators.filter((o) => o.psi.scoredSessions >= PSI_CANDIDATE_MIN_SESSIONS).length;
+  return {
+    operators,
+    meta: {
+      totalOperators: operators.length,
+      eligibleOperators,
+      candidates: operators.filter((o) => o.psi.isCandidate).length,
+      candidateWealth: PSI_CANDIDATE_WEALTH,
+      candidateMinSessions: PSI_CANDIDATE_MIN_SESSIONS,
+      // Honest look-elsewhere accounting (D4/D15): with many operators, candidates
+      // are expected by chance — which is why a candidate must REPLICATE.
+      expectedFalseCandidates: eligibleOperators / PSI_CANDIDATE_WEALTH,
+    },
   };
 }
 

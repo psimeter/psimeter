@@ -3,10 +3,18 @@ import { readFile } from 'node:fs/promises';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { choiceVocabulary, isValidChoice, type Choice, type EntropySource } from '@psymeter/core';
+import { canonicalize, choiceVocabulary, isValidChoice, type Choice, type EntropySource } from '@psymeter/core';
 import { LedgerStore } from './ledgerStore.js';
 import { loadExperiment, listExperiments } from './experiments.js';
-import { LedgerReader, globalStats, experimentStat, type OpenPayload } from './ledgerReader.js';
+import {
+  LedgerReader,
+  globalStats,
+  experimentStat,
+  leaderboard,
+  psiForOperator,
+  type OpenPayload,
+} from './ledgerReader.js';
+import { saveContact } from './contactStore.js';
 import { selectEntropySource } from './select.js';
 import { selectBeacon, type BeaconProvider } from './beacon.js';
 import { commitOpen, prepareSession, type SessionContext } from './session.js';
@@ -25,6 +33,9 @@ const clientDir = resolve(repoRoot, 'packages/client/dist');
 // are honored as-is. Lets each experiment campaign keep its own ledger file.
 const ledgerPath = resolve(repoRoot, process.env.PSYMETER_LEDGER ?? 'ledger/dev.jsonl');
 const blobDir = resolve(dirname(ledgerPath), 'blobs');
+// PRIVATE, off-ledger store for opt-in psi-candidate contacts (D15). Holds PII,
+// so it lives beside the ledger (git-ignored) and is NEVER served over /api.
+const contactsPath = resolve(dirname(ledgerPath), 'contacts.jsonl');
 // Presentiment stimulus corpus (content-hash-pinned in the experiment def, D14).
 const stimuliDir = resolve(repoRoot, 'stimuli');
 
@@ -109,6 +120,12 @@ export function createApp(): http.Server {
       void handleSign(req, res, signMatch[1]!, store, sessions);
       return;
     }
+    // Opt-in psi-candidate contact (D15): operator-signed, eligibility recomputed
+    // from the ledger, stored privately off-ledger.
+    if (req.method === 'POST' && path === '/api/contact') {
+      void handleContact(req, res, reader);
+      return;
+    }
     if (req.method === 'GET') {
       if (path === '/api/experiments') {
         handleExperiments(res, reader);
@@ -116,6 +133,11 @@ export function createApp(): http.Server {
       }
       if (path === '/api/stats') {
         sendJson(res, 200, globalStats(reader.summaries()));
+        return;
+      }
+      // Per-operator psi leaderboard (D15 / H1): consistency, not lucky sessions.
+      if (path === '/api/leaderboard') {
+        sendJson(res, 200, leaderboard(reader.summaries()));
         return;
       }
       const detailMatch = path.match(SESSION_DETAIL_ROUTE);
@@ -262,11 +284,62 @@ function handleExperiments(res: http.ServerResponse, reader: LedgerReader): void
 
 function handleSessionList(res: http.ServerResponse, reader: LedgerReader, params: URLSearchParams): void {
   const operator = params.get('operator');
-  let rows = reader.summaries();
-  if (operator) rows = rows.filter((r) => r.operatorPubKey === operator);
+  const all = reader.summaries();
+  let rows = operator ? all.filter((r) => r.operatorPubKey === operator) : all;
+  // The operator's psi score is computed over ALL their sessions, before the
+  // display slice below (D15) — so the history page can show the live ladder.
+  const psi = operator ? psiForOperator(all, operator) : null;
   const limit = Math.min(Math.max(Number(params.get('limit')) || 200, 1), 1000);
   rows = rows.slice().reverse().slice(0, limit); // most recent first
-  sendJson(res, 200, { sessions: rows });
+  sendJson(res, 200, { sessions: rows, psi });
+}
+
+/**
+ * Opt-in contact for a psi candidate (spec D15). The operator signs a canonical
+ * challenge (proving key custody), the server re-derives their psi score from the
+ * public ledger and requires candidate status, then stores the contact privately
+ * off-ledger. No PII is ever logged to the public chain or returned by any GET.
+ */
+async function handleContact(req: http.IncomingMessage, res: http.ServerResponse, reader: LedgerReader): Promise<void> {
+  try {
+    const body = JSON.parse(await readBody(req)) as {
+      operatorPubKey?: string;
+      contact?: string;
+      message?: string;
+      operatorSig?: string;
+    };
+    const operatorPubKey = body.operatorPubKey ?? '';
+    const contact = (body.contact ?? '').slice(0, 2000);
+    const message = (body.message ?? '').slice(0, 4000);
+    if (!operatorPubKey || !body.operatorSig) {
+      sendJson(res, 400, { error: 'operatorPubKey and operatorSig required' });
+      return;
+    }
+    // The signed challenge binds the exact fields, so the server can't be tricked
+    // into accepting a sig over different content.
+    const challenge = canonicalize({ type: 'psi.contact', operatorPubKey, contact, message });
+    if (!verifyEd25519(operatorPubKey, challenge, body.operatorSig)) {
+      sendJson(res, 400, { error: 'invalid operator signature' });
+      return;
+    }
+    const psi = psiForOperator(reader.summaries(), operatorPubKey);
+    if (!psi.isCandidate) {
+      sendJson(res, 403, { error: 'not eligible: psi score has not reached the candidate threshold' });
+      return;
+    }
+    saveContact(contactsPath, {
+      ts: new Date().toISOString(),
+      operatorPubKey,
+      contact,
+      message,
+      operatorSig: body.operatorSig,
+      psiPoints: psi.points,
+      wealth: psi.wealth,
+    });
+    sendJson(res, 200, { ok: true });
+  } catch (err) {
+    sendJson(res, 400, { error: String(err) });
+  }
 }
 
 function handleSessionDetail(res: http.ServerResponse, reader: LedgerReader, id: string): void {
