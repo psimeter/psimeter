@@ -14,7 +14,7 @@ import {
   sessionZ,
   hitRateZ,
   displayZFromSeal,
-  derivePrecogTarget,
+  derivePresentimentTarget,
   trialCommit,
   stoufferZ,
   type ExperimentDefinition,
@@ -174,19 +174,33 @@ test('commitHash equals sha256 of the canonical form and is order-independent', 
   assert.equal(commitHash({ b: 1, a: 2 }), commitHash({ a: 2, b: 1 }));
 });
 
-// ---------- precognition target derivation (spec §7.5) ----------
-test('derivePrecogTarget is deterministic, in range, and matches Python parity vectors', () => {
+// ---------- presentiment target derivation (spec §7.5) ----------
+test('derivePresentimentTarget matches frozen Python parity vectors', () => {
   const B = 'deadbeef'.repeat(8);
-  // Frozen vectors — analysis/analyze.py must reproduce these exactly.
-  assert.deepEqual([0, 1, 2, 3].map((i) => derivePrecogTarget(B, i, 2)), [1, 1, 0, 0]);
-  assert.deepEqual([0, 1, 2, 3].map((i) => derivePrecogTarget(B, i, 3)), [1, 2, 0, 2]);
-  // In range for any k, and stable across calls.
-  for (let k = 2; k <= 7; k++) {
-    const t = derivePrecogTarget(B, 11, k);
-    assert.ok(t >= 0 && t < k && Number.isInteger(t));
-    assert.equal(t, derivePrecogTarget(B, 11, k));
+  // {valence, imageIndex} for pools calm=10, aversive=7. analyze.py + browser
+  // /verify must reproduce these exactly.
+  const got = [0, 1, 2, 3, 4, 5].map((i) => derivePresentimentTarget(B, i, 10, 7));
+  assert.deepEqual(got, [
+    { valence: 1, imageIndex: 2 },
+    { valence: 0, imageIndex: 4 },
+    { valence: 0, imageIndex: 5 },
+    { valence: 0, imageIndex: 1 },
+    { valence: 0, imageIndex: 9 },
+    { valence: 1, imageIndex: 6 },
+  ]);
+});
+
+test('derivePresentimentTarget: valence is a fair coin; index stays in its pool', () => {
+  const B = 'deadbeef'.repeat(8);
+  let ones = 0;
+  for (let i = 0; i < 1000; i++) {
+    const t = derivePresentimentTarget(B, i, 10, 7);
+    assert.ok(t.valence === 0 || t.valence === 1);
+    assert.ok(t.imageIndex >= 0 && t.imageIndex < (t.valence === 0 ? 10 : 7));
+    ones += t.valence;
   }
-  assert.throws(() => derivePrecogTarget(B, 0, 1));
+  assert.ok(Math.abs(ones / 1000 - 0.5) < 0.05, `valence balance ${ones / 1000}`);
+  assert.throws(() => derivePresentimentTarget(B, 0, 0, 0));
 });
 
 test('trialCommit matches the frozen golden vector (cross-language parity)', () => {

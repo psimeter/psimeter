@@ -25,6 +25,8 @@ const clientDir = resolve(repoRoot, 'packages/client/dist');
 // are honored as-is. Lets each experiment campaign keep its own ledger file.
 const ledgerPath = resolve(repoRoot, process.env.PSYMETER_LEDGER ?? 'ledger/dev.jsonl');
 const blobDir = resolve(dirname(ledgerPath), 'blobs');
+// Presentiment stimulus corpus (content-hash-pinned in the experiment def, D14).
+const stimuliDir = resolve(repoRoot, 'stimuli');
 
 /** Pacing is FAST (no inter-checkpoint delay) for tests; off in normal use. */
 const FAST = process.env.PSYMETER_FAST === '1';
@@ -38,6 +40,8 @@ const CONTENT_TYPES: Record<string, string> = {
   '.map': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.woff2': 'font/woff2',
   '.webmanifest': 'application/manifest+json',
@@ -131,7 +135,13 @@ export function createApp(): http.Server {
     // Raw blobs are public artifacts (D2) — serve them so the in-browser /verify
     // can re-derive precognition trials and re-check Merkle roots without trusting us.
     if (req.method === 'GET' && path.startsWith('/blobs/')) {
-      void serveBlob(res, path);
+      void serveFromDir(blobDir, '/blobs/', res, path);
+      return;
+    }
+    // Presentiment stimulus images (content-hash-pinned in the experiment def,
+    // D14) — served for the live reveal and for in-browser pixel verification.
+    if (req.method === 'GET' && path.startsWith('/stimuli/')) {
+      void serveFromDir(stimuliDir, '/stimuli/', res, path);
       return;
     }
     void serveStatic(req, res);
@@ -244,6 +254,7 @@ function handleExperiments(res: http.ServerResponse, reader: LedgerReader): void
     params: d.params,
     choices: choiceVocabulary(d),
     stimuli: d.stimuli ?? null,
+    contentWarning: (d as { contentWarning?: string }).contentWarning ?? null,
     stats: experimentStat(rows, d.id),
   }));
   sendJson(res, 200, { experiments });
@@ -329,11 +340,11 @@ async function serveStatic(req: http.IncomingMessage, res: http.ServerResponse):
   res.writeHead(404).end('not found');
 }
 
-/** Serve a content-addressed raw blob from the ledger's blobs/ directory. */
-async function serveBlob(res: http.ServerResponse, urlPath: string): Promise<void> {
-  const name = decodeURIComponent(urlPath.slice('/blobs/'.length));
-  const fsPath = resolve(blobDir, name);
-  if (!fsPath.startsWith(blobDir)) {
+/** Serve a public file from a fixed base directory, with path-traversal guard. */
+async function serveFromDir(baseDir: string, prefix: string, res: http.ServerResponse, urlPath: string): Promise<void> {
+  const name = decodeURIComponent(urlPath.slice(prefix.length));
+  const fsPath = resolve(baseDir, name);
+  if (!fsPath.startsWith(baseDir)) {
     res.writeHead(403).end('forbidden');
     return;
   }

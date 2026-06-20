@@ -34,22 +34,41 @@ export function trialCommit(input: TrialCommitInput): string {
   return commitHash(input);
 }
 
+/** What a presentiment trial's future beacon round destines the operator to see. */
+export interface PresentimentTarget {
+  /** 0 = calm (positive), 1 = aversive (negative) — a fair coin, see below. */
+  valence: number;
+  /** Index into that valence's stimulus pool (the specific image shown). */
+  imageIndex: number;
+}
+
 /**
- * Derive a trial's target option index from the future beacon value `B_R`.
+ * Derive which stimulus a presentiment trial will reveal, from the future beacon
+ * value `B_R` (spec §7.5). Pure and reproducible by anyone:
  *
- *   target = uint64_be( SHA256( bytes(B_R) ‖ uint32_be(trialIndex) )[:8] ) mod k
+ *   digest     = SHA256( bytes(B_R) ‖ uint32_be(trialIndex) )
+ *   valence    = digest[0] & 1                         // 0=calm, 1=aversive
+ *   imageIndex = uint64_be(digest[8:16]) mod poolSize  // within that valence
  *
- * Domain-separating by `trialIndex` lets one round seed independent trials if
- * ever needed; in the live protocol each trial binds its own round. `k` is the
- * number of options per trial (≥ 2).
+ * Valence is taken from a single bit so it is an EXACT fair coin (p = 0.5)
+ * regardless of how many images sit in each pool; the image is then chosen from a
+ * disjoint slice of the digest. `calmCount`/`aversiveCount` are the pool sizes
+ * from the (content-hashed) experiment definition, so the selected image is
+ * pinned by the definition hash.
  */
-export function derivePrecogTarget(beaconValueHex: string, trialIndex: number, optionsPerTrial: number): number {
-  if (optionsPerTrial < 2) throw new Error('optionsPerTrial must be >= 2');
-  const msg = concatBytes(hexToBytes(beaconValueHex), uint32BE(trialIndex));
-  const digest = sha256Bytes(msg);
+export function derivePresentimentTarget(
+  beaconValueHex: string,
+  trialIndex: number,
+  calmCount: number,
+  aversiveCount: number,
+): PresentimentTarget {
+  const digest = sha256Bytes(concatBytes(hexToBytes(beaconValueHex), uint32BE(trialIndex)));
+  const valence = digest[0]! & 1;
+  const poolSize = valence === 0 ? calmCount : aversiveCount;
+  if (poolSize <= 0) throw new Error('empty stimulus pool');
   let v = 0n;
-  for (let i = 0; i < 8; i++) v = (v << 8n) | BigInt(digest[i]!);
-  return Number(v % BigInt(optionsPerTrial));
+  for (let i = 8; i < 16; i++) v = (v << 8n) | BigInt(digest[i]!);
+  return { valence, imageIndex: Number(v % BigInt(poolSize)) };
 }
 
 function uint32BE(n: number): Uint8Array {

@@ -75,10 +75,14 @@ def hit_rate_z(hits: int, n: int, p: float) -> float:
     return (hits - n * p) / math.sqrt(n * p * (1 - p))
 
 
-def derive_precog_target(beacon_value_hex: str, trial_index: int, options_per_trial: int) -> int:
-    """Mirror of derivePrecogTarget in packages/core/src/precog.ts (spec §7.5)."""
-    msg = bytes.fromhex(beacon_value_hex) + trial_index.to_bytes(4, "big")
-    return int.from_bytes(hashlib.sha256(msg).digest()[:8], "big") % options_per_trial
+def derive_presentiment_target(beacon_value_hex: str, trial_index: int, calm_count: int, aversive_count: int):
+    """Mirror of derivePresentimentTarget in packages/core/src/precog.ts (spec §7.5).
+    Returns (valence, image_index): valence = digest[0]&1 (fair coin), image index
+    from digest[8:16] mod that valence's pool size."""
+    d = hashlib.sha256(bytes.fromhex(beacon_value_hex) + trial_index.to_bytes(4, "big")).digest()
+    valence = d[0] & 1
+    pool = calm_count if valence == 0 else aversive_count
+    return valence, int.from_bytes(d[8:16], "big") % pool
 
 
 def phi(z: float) -> float:
@@ -255,25 +259,39 @@ def verify_blob(ledger_dir: Path, s: dict, opens: dict) -> None:
         print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'})")
         return
 
-    # precognition: blob is a canonical JSON array of trial records (spec §7.5).
+    # presentiment: blob is a canonical JSON array of trial records (spec §7.5).
     op = opens.get(s["sessionId"], {}).get("payload", {})
     pub = op.get("operatorPubKey", "")
-    k = s["optionsPerTrial"]
     defn = load_experiment_def(op.get("experimentId", ""), op.get("experimentVersion", 0))
     vocab = (defn.get("choices") or defn.get("intentions") or []) if defn else []
+    stimuli = (defn.get("stimuli") or {}) if defn else {}
+    pools = [stimuli.get(vocab[0], []) if len(vocab) > 0 else [], stimuli.get(vocab[1], []) if len(vocab) > 1 else []]
+    repo_root = EXPERIMENTS_DIR.parent
     recs = json.loads(data.decode("utf-8"))
     leaves = [canonicalize(r).encode("utf-8") for r in recs]
     merkle_ok = merkle_root(leaves) == s["outputCommitment"]
 
     trials_ok = True
+    pixels_ok = True
     sig_state, have_check = "ok", False
+    pixel_cache = {}
     for r in recs:
         if r["targetRound"] <= r["prevBeaconRound"]:
-            trials_ok = False  # target must be a FUTURE round
-        if derive_precog_target(r["beaconValue"], r["trialIndex"], k) != r["target"]:
-            trials_ok = False  # target must be reproducible from the beacon
-        if vocab and r["choice"] in vocab and (1 if vocab.index(r["choice"]) == r["target"] else 0) != r["hit"]:
-            trials_ok = False  # hit must follow from choice vs target
+            trials_ok = False  # image must be bound to a FUTURE round
+        if pools[0] and pools[1]:
+            valence, idx = derive_presentiment_target(r["beaconValue"], r["trialIndex"], len(pools[0]), len(pools[1]))
+            chosen = pools[valence][idx]
+            if valence != r["valence"] or chosen["path"] != r["imagePath"] or chosen["sha256"] != r["imageSha256"]:
+                trials_ok = False  # valence + image must reproduce from the beacon + committed corpus
+        if vocab and r["choice"] in vocab and (1 if vocab.index(r["choice"]) == r["valence"] else 0) != r["hit"]:
+            trials_ok = False  # hit must follow from prediction vs revealed valence
+        # the actual shown pixels must match the committed image hash
+        path = r["imagePath"]
+        if path not in pixel_cache:
+            fp = repo_root / path
+            pixel_cache[path] = ("sha256:" + hashlib.sha256(fp.read_bytes()).hexdigest()) if fp.exists() else None
+        if pixel_cache[path] != r["imageSha256"]:
+            pixels_ok = False
         tc = sha256_str(canonicalize({
             "sessionId": op.get("sessionId"), "trialIndex": r["trialIndex"], "choice": r["choice"],
             "targetRound": r["targetRound"], "prevBeaconRound": r["prevBeaconRound"], "operatorPubKey": pub,
@@ -284,8 +302,9 @@ def verify_blob(ledger_dir: Path, s: dict, opens: dict) -> None:
             if sv is False:
                 sig_state, trials_ok = "BAD", False
     sig_txt = sig_state if have_check else "-"
-    verdict = "OK" if (flat_ok and merkle_ok and trials_ok) else "MISMATCH"
-    print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'}, {len(recs)} trials re-derived, sigs {sig_txt})")
+    verdict = "OK" if (flat_ok and merkle_ok and trials_ok and pixels_ok) else "MISMATCH"
+    print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'}, "
+          f"{len(recs)} trials re-derived, pixels {'ok' if pixels_ok else 'BAD'}, sigs {sig_txt})")
 
 
 def main(path: str) -> int:

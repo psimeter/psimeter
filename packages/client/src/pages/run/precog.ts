@@ -1,12 +1,13 @@
 // The presentiment (forced-choice precognition) runner (spec §7.5, §10).
 //
 // Hypothesis: some people feel an event's emotional valence *before* it happens.
-// Each trial the operator chooses which of two emotionally-loaded outcomes they
-// sense is coming — BEFORE it exists. The choice is signed and bound to a future
-// drand round; once that round publishes, the target is derived from it and the
-// hit revealed. We hunt for individuals who beat chance *consistently* (H1).
+// Each trial the operator is DESTINED (by a future beacon round, so it doesn't
+// exist yet) to be shown either a calming or an aversive image. They try to feel
+// which is coming, lock + sign their guess, and then the REAL image actually
+// appears and hits them. A hit is anticipating the valence that then lands. We
+// look for individuals who beat chance consistently (H1) — never one session.
 //
-// Two-way socket, but sound: the target is bound to a beacon round nobody can
+// Two-way socket, but sound: the image is bound to a beacon round nobody can
 // predict at choice time, so there is no channel to game.
 
 import { el } from '../../ui';
@@ -23,30 +24,60 @@ import {
   type PrecogSeal,
 } from '../../api';
 
-interface Stimulus { label: string; cue: string; glyph: string; color: string; }
+// Display metadata for the two valence predictions (the buttons). The actual
+// emotional payload is the revealed photo, not these labels.
+const VALENCE_META: Record<string, { label: string; glyph: string; color: string }> = {
+  calm: { label: 'Calm', glyph: '🌿', color: '#2fae8f' },
+  aversive: { label: 'Unease', glyph: '⚠', color: '#e5484d' },
+};
 
 export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): Disposer {
   const inner = el('div', { class: 'runner-inner' });
   outlet.append(el('section', { class: 'runner' }, inner));
 
-  const stim = (info.stimuli ?? {}) as Record<string, Stimulus>;
+  const consentKey = `psymeter.consent.${info.id}`;
+  const revealHoldMs = Number((info.params as Record<string, number>).revealHoldMs ?? 4000);
   let socket: PrecogSocket | null = null;
   let pubKey = '';
   let sessionId = '';
   let currentChoice: string | null = null;
   let trialsPerSession = Number((info.params as Record<string, number>).trialsPerSession ?? 0);
+  let revealUntil = 0;
+  let revealTimer: number | undefined;
 
   function teardown(): void {
     socket?.close();
     socket = null;
+    if (revealTimer !== undefined) { clearTimeout(revealTimer); revealTimer = undefined; }
     document.body.classList.remove('focus');
+  }
+
+  // Show the content-warning consent gate once (spec §10 safeguard), then setup.
+  function start(): void {
+    if (info.contentWarning && localStorage.getItem(consentKey) !== 'yes') { showGate(); return; }
+    showSetup();
+  }
+
+  function showGate(): void {
+    teardown();
+    inner.replaceChildren(
+      el('div', { class: 'setup card consent' }, [
+        el('span', { class: 'eyebrow' }, 'Before you start'),
+        el('h1', {}, 'Heads up'),
+        el('p', { class: 'sub' }, info.contentWarning ?? ''),
+        el('div', { class: 'actions' }, [
+          el('button', { class: 'btn primary', onclick: () => { localStorage.setItem(consentKey, 'yes'); showSetup(); } }, 'I’m 18+ — continue'),
+          el('a', { class: 'btn ghost', href: '/experiments', 'data-link': true }, 'Not now'),
+        ]),
+      ]),
+    );
   }
 
   function showSetup(error?: string): void {
     teardown();
     const startBtn = el('button', { class: 'btn primary lg', style: 'width:100%;margin-top:8px' }, 'Begin session');
     const status = el('p', { class: 'fineprint' },
-      'Each round, before the outcome exists, choose the feeling you sense is coming. Your choice is signed and locked to a future public-randomness beacon, so it can never be back-fitted.');
+      'Each round, before the image exists, choose the feeling you sense is coming. Your choice is signed and locked to a future public-randomness beacon, so it can never be back-fitted — then the real image appears.');
     if (error) { status.textContent = error; status.style.color = 'var(--danger)'; }
     startBtn.addEventListener('click', () => { void begin(startBtn, status); });
 
@@ -55,8 +86,8 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
         el('span', { class: 'eyebrow' }, info.title),
         el('h1', {}, 'Can you feel what’s coming?'),
         el('p', { class: 'sub' },
-          `${trialsPerSession} quick trials. Each one, pick the emotion you sense before it is revealed — the target is decided by a future beacon round that does not exist yet.`),
-        el('div', { class: 'option-preview' }, info.choices.map((c) => optionChip(stim[c], c))),
+          `${trialsPerSession} quick trials. Each one, sense whether a soothing or an unsettling image is about to appear, lock it in, then see what actually lands.`),
+        el('div', { class: 'option-preview' }, info.choices.map(optionChip)),
         startBtn,
         status,
       ]),
@@ -97,15 +128,20 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
           el('span', { class: 'live-dot' }, 'committed before reveal'),
         ]),
         stage,
-        el('div', { class: 'viz-caption' }, `anchor ${anchor} · targets from a future public beacon · display only`),
+        el('div', { class: 'viz-caption' }, `anchor ${anchor} · the image is fixed by a future public beacon · display only`),
       ]),
     );
 
     socket = openPrecogStream(wsPath, {
       onStarted: (m) => { trialsPerSession = m.trialsPerSession; progress.textContent = `0 / ${m.trialsPerSession}`; },
-      onTrial: (m) => showChoice(stage, m.trialIndex),
+      // Hold the previous reveal on screen for revealHoldMs before the next choice.
+      onTrial: (m) => {
+        const delay = Math.max(0, revealUntil - Date.now());
+        if (revealTimer !== undefined) clearTimeout(revealTimer);
+        revealTimer = window.setTimeout(() => showChoice(stage, m.trialIndex), delay);
+      },
       onPending: (m) => { void onPending(stage, m.trialIndex, m.targetRound, m.prevBeaconRound); },
-      onReveal: (m) => { showReveal(stage, m); hitsVal.textContent = String(m.hits); progress.textContent = `${m.completed} / ${m.trialsPerSession}`; },
+      onReveal: (m) => { showReveal(stage, m); revealUntil = Date.now() + revealHoldMs; hitsVal.textContent = String(m.hits); progress.textContent = `${m.completed} / ${m.trialsPerSession}`; },
       onSeal: (m) => showSeal(anchor, m),
       onError: (message) => showSetup(`Session error: ${message}`),
     });
@@ -114,10 +150,10 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
   function showChoice(stage: HTMLElement, trialIndex: number): void {
     currentChoice = null;
     const buttons = info.choices.map((c) => {
-      const s = stim[c];
+      const meta = VALENCE_META[c] ?? { label: c, glyph: '?', color: '#6ea8fe' };
       const b = el('button', {
         class: 'option-card',
-        style: s ? `--accent:${s.color}` : '',
+        style: `--accent:${meta.color}`,
         onclick: () => {
           if (currentChoice) return;
           currentChoice = c;
@@ -125,13 +161,13 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
           socket?.sendChoice(trialIndex, c);
         },
       }, [
-        el('span', { class: 'option-glyph' }, s?.glyph ?? '?'),
-        el('span', { class: 'option-label' }, s?.label ?? c),
+        el('span', { class: 'option-glyph' }, meta.glyph),
+        el('span', { class: 'option-label' }, meta.label),
       ]);
       return b;
     });
     stage.replaceChildren(
-      el('div', { class: 'precog-prompt' }, 'Which is coming? Choose on instinct.'),
+      el('div', { class: 'precog-prompt' }, 'What’s coming? Choose on instinct.'),
       el('div', { class: 'options' }, buttons),
     );
   }
@@ -140,7 +176,7 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
     if (!currentChoice) return;
     stage.replaceChildren(el('div', { class: 'precog-waiting' }, [
       el('div', { class: 'pulse-ring' }),
-      el('div', {}, 'Locked. Waiting for the moment to arrive…'),
+      el('div', {}, 'Locked. The moment is arriving…'),
     ]));
     const tc = trialCommit({ sessionId, trialIndex, choice: currentChoice, targetRound, prevBeaconRound, operatorPubKey: pubKey });
     const sig = await signPrecommit(tc);
@@ -148,13 +184,15 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
   }
 
   function showReveal(stage: HTMLElement, m: PrecogReveal): void {
-    const t = stim[m.targetChoice];
+    const meta = VALENCE_META[m.targetChoice] ?? { label: m.targetChoice, glyph: '?', color: '#6ea8fe' };
     const hit = m.hit === 1;
     stage.replaceChildren(
-      el('div', { class: `precog-reveal ${hit ? 'hit' : 'miss'}`, style: t ? `--accent:${t.color}` : '' }, [
-        el('div', { class: 'reveal-glyph' }, t?.glyph ?? '?'),
-        el('div', { class: 'reveal-label' }, t?.label ?? m.targetChoice),
-        el('div', { class: 'reveal-verdict' }, hit ? 'HIT — you felt it' : 'miss'),
+      el('div', { class: `precog-reveal ${hit ? 'hit' : 'miss'}`, style: `--accent:${meta.color}` }, [
+        el('img', { class: 'reveal-img', src: `/${m.imagePath}`, alt: meta.label, draggable: 'false' }),
+        el('div', { class: 'reveal-bar' }, [
+          el('span', { class: 'reveal-label' }, meta.label),
+          el('span', { class: 'reveal-verdict' }, hit ? 'HIT — you felt it' : 'miss'),
+        ]),
       ]),
     );
   }
@@ -190,14 +228,15 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
     );
   }
 
-  showSetup();
+  start();
   return teardown;
 }
 
-function optionChip(s: Stimulus | undefined, id: string): HTMLElement {
-  return el('div', { class: 'option-chip', style: s ? `--accent:${s.color}` : '' }, [
-    el('span', { class: 'option-glyph' }, s?.glyph ?? '?'),
-    el('span', {}, s?.label ?? id),
+function optionChip(id: string): HTMLElement {
+  const meta = VALENCE_META[id] ?? { label: id, glyph: '?', color: '#6ea8fe' };
+  return el('div', { class: 'option-chip', style: `--accent:${meta.color}` }, [
+    el('span', { class: 'option-glyph' }, meta.glyph),
+    el('span', {}, meta.label),
   ]);
 }
 

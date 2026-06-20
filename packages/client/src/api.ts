@@ -131,11 +131,13 @@ export interface PrecogReveal {
   type: 'reveal';
   trialIndex: number;
   choice: Choice;
-  target: number;
+  /** 0 = calm, 1 = aversive — the valence the beacon destined. */
+  valence: number;
   targetChoice: Choice;
+  /** The actual stimulus image shown (path under /stimuli). */
+  imagePath: string;
   hit: number;
   beaconRound: number;
-  beaconValue: string;
   hits: number;
   completed: number;
   trialsPerSession: number;
@@ -257,6 +259,7 @@ export interface ExperimentInfo {
   params: Record<string, unknown>;
   choices: Choice[];
   stimuli: Record<string, unknown> | null;
+  contentWarning: string | null;
   stats: { sessions: number; sealed: number; byChoice: Record<string, number> };
 }
 

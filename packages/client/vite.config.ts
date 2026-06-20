@@ -23,6 +23,8 @@ export default defineConfig({
       // Raw blobs (content-addressed artifacts) — needed by the in-browser
       // /verify view to re-derive precognition trials (spec §7.5).
       '/blobs': { target: 'http://localhost:8787', changeOrigin: false },
+      // Presentiment stimulus images (the reveal, and pixel verification).
+      '/stimuli': { target: 'http://localhost:8787', changeOrigin: false },
     },
   },
   build: {

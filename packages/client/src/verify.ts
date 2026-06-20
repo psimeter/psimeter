@@ -17,7 +17,7 @@ import {
   canonicalize,
   sha256,
   MerkleAccumulator,
-  derivePrecogTarget,
+  derivePresentimentTarget,
   trialCommit,
   choiceVocabulary,
 } from '@psymeter/core';
@@ -99,10 +99,14 @@ interface TrialRecord {
   prevBeaconRound: number;
   beaconValue: string;
   beaconSignature?: string;
-  target: number;
+  valence: number;
+  imagePath: string;
+  imageSha256: string;
   hit: number;
   operatorSig: string;
 }
+
+interface Stimulus { path: string; sha256: string; }
 
 async function verifyPrecogTrials(
   checks: Check[],
@@ -122,12 +126,15 @@ async function verifyPrecogTrials(
     return;
   }
 
-  const k = s.optionsPerTrial ?? 0;
   const vocab = experiment ? choiceVocabulary(experiment) : [];
+  const stimuli = (experiment?.stimuli ?? {}) as Record<string, Stimulus[]>;
+  const pools: Stimulus[][] = [stimuli[vocab[0]!] ?? [], stimuli[vocab[1]!] ?? []];
+  const haveCorpus = pools[0]!.length > 0 && pools[1]!.length > 0;
+
   const merkle = new MerkleAccumulator();
   let sigsOk = true;
   let futureOk = true;
-  let targetsOk = true;
+  let derivedOk = true; // valence + selected image re-derive from the beacon
   let hitsOk = true;
 
   for (const r of records) {
@@ -142,18 +149,36 @@ async function verifyPrecogTrials(
     });
     if (!(await verifySignature(o.operatorPubKey, tc, r.operatorSig))) sigsOk = false;
     if (r.targetRound <= r.prevBeaconRound) futureOk = false;
-    if (derivePrecogTarget(r.beaconValue, r.trialIndex, k) !== r.target) targetsOk = false;
+    if (haveCorpus) {
+      const t = derivePresentimentTarget(r.beaconValue, r.trialIndex, pools[0]!.length, pools[1]!.length);
+      const chosen = pools[t.valence]![t.imageIndex];
+      if (t.valence !== r.valence || chosen?.path !== r.imagePath || chosen?.sha256 !== r.imageSha256) derivedOk = false;
+    }
     if (vocab.length && vocab.indexOf(r.choice) !== -1) {
-      const expectedHit = vocab.indexOf(r.choice) === r.target ? 1 : 0;
+      const expectedHit = vocab.indexOf(r.choice) === r.valence ? 1 : 0;
       if (expectedHit !== r.hit) hitsOk = false;
     }
   }
 
+  // Re-hash the actual shown pixels (dedup by path) against the committed hash —
+  // the chain runs beacon → committed image hash → real bytes.
+  let pixelsOk = true;
+  const seen = new Map<string, string>();
+  for (const path of new Set(records.map((r) => r.imagePath))) {
+    try {
+      const res = await fetch(`/${path}`);
+      const buf = new Uint8Array(await res.arrayBuffer());
+      seen.set(path, sha256(buf));
+    } catch { pixelsOk = false; }
+  }
+  for (const r of records) if (seen.get(r.imagePath) !== r.imageSha256) pixelsOk = false;
+
   const n = records.length;
   checks.push({ label: `All ${n} choices were signed by the operator`, ok: sigsOk });
-  checks.push({ label: `Every target round was in the future at choice time`, ok: futureOk, note: 'target round > the round known when the choice was made' });
-  checks.push({ label: `All ${n} targets re-derive from the public beacon`, ok: targetsOk });
-  checks.push({ label: 'Recorded hits match choice vs target', ok: hitsOk });
+  checks.push({ label: 'Every image was fixed to a future beacon round', ok: futureOk, note: 'target round > the round known when the choice was made' });
+  checks.push({ label: `All ${n} images re-derive from the public beacon`, ok: derivedOk, note: haveCorpus ? undefined : 'experiment definition unavailable — skipped' });
+  checks.push({ label: 'Shown images match their committed SHA-256 (pixels)', ok: pixelsOk });
+  checks.push({ label: 'Recorded hits match prediction vs revealed valence', ok: hitsOk });
   checks.push({ label: 'Trial records reproduce the sealed Merkle root', ok: merkle.root() === s.outputCommitment, note: s.outputCommitment });
   checks.push({ label: 'Raw blob matches its recorded SHA-256', ok: sha256(bytes) === s.rawSha256 });
 }

@@ -7,11 +7,86 @@
     "sessionSeconds": 120,
     "trialsPerSession": 20,
     "optionsPerTrial": 2,
-    "beaconRoundOffset": 2
+    "beaconRoundOffset": 2,
+    "revealHoldMs": 4000
   },
-  "choices": ["calm", "dread"],
+  "choices": [
+    "calm",
+    "aversive"
+  ],
+  "contentWarning": "Each trial reveals a real image — pleasant (puppies, kittens) or deliberately unpleasant (spiders, snakes). For adults; not graphic.",
   "stimuli": {
-    "calm": { "label": "Calm", "cue": "calm", "glyph": "🌿", "color": "#2fae8f" },
-    "dread": { "label": "Dread", "cue": "dread", "glyph": "⚠", "color": "#e5484d" }
+    "calm": [
+      {
+        "path": "stimuli/calm/kitten-10.jpg",
+        "sha256": "sha256:c8e42a768157dc8cda24c05e756bc1ca6b23ee3d9f21001f1ae1fd1c283ebeb4"
+      },
+      {
+        "path": "stimuli/calm/kitten-9.jpg",
+        "sha256": "sha256:2626bdfc6cbfe0a0659273f91357e03e4b99da7d00692b36f428e55346d9c48d"
+      },
+      {
+        "path": "stimuli/calm/puppy-1.jpg",
+        "sha256": "sha256:d02a354308b284bd97044496af20f935704c77ed824d1c79599d1f3cd9a46187"
+      },
+      {
+        "path": "stimuli/calm/puppy-2.jpg",
+        "sha256": "sha256:1aec40405c0233b8fa682bc0f3437a565223bb37b8d3113b41154c52499af14b"
+      },
+      {
+        "path": "stimuli/calm/puppy-3.jpg",
+        "sha256": "sha256:843383663b07fb16b1b24c738929aa3c710183b7410c7525fae9bb4f00c84b7d"
+      },
+      {
+        "path": "stimuli/calm/puppy-4.jpg",
+        "sha256": "sha256:ffa39dd235e11e57fd546e9a1365079672ae121b1a4d688a0ad3e52e4f35dff7"
+      },
+      {
+        "path": "stimuli/calm/puppy-5.jpg",
+        "sha256": "sha256:cc1d433c3ec38eb06fa3e60c23c1e4ac817bf5b9d4e1f27000eef5b2182c88a5"
+      },
+      {
+        "path": "stimuli/calm/puppy-6.jpg",
+        "sha256": "sha256:5a944605f6107917644cf0b3091d37b8b0692fcbf744ad38824e901a452f6707"
+      },
+      {
+        "path": "stimuli/calm/puppy-7.jpg",
+        "sha256": "sha256:43c3ebd909508787c0d57787bb3b3b0b5125871e229c0407832480bab8e10df6"
+      },
+      {
+        "path": "stimuli/calm/puppy-8.jpg",
+        "sha256": "sha256:9b9a90338d16926765295efd83d3b01ce7fe19e377b3e91ee0f2af74733e0a80"
+      }
+    ],
+    "aversive": [
+      {
+        "path": "stimuli/aversive/snake-7.jpg",
+        "sha256": "sha256:0e8fa61feca549c2e454a99b43c2bb683cc657c53df99357d5f5a684672985c1"
+      },
+      {
+        "path": "stimuli/aversive/snake-8.jpg",
+        "sha256": "sha256:dbe95992ef74b09a26d2cf8f998df5d7239e80d71840c5d1ffe56778847b4678"
+      },
+      {
+        "path": "stimuli/aversive/spider-closeup-2.jpg",
+        "sha256": "sha256:85645698ed5ee449635fcd837038ebf62594a6b0f9728f4c26b1cc168afa1744"
+      },
+      {
+        "path": "stimuli/aversive/spider-closeup-3.jpg",
+        "sha256": "sha256:a27c7e623e2b81e0a1e5b90651c75ab6785d43c271f678e2f2dec13a662c17d7"
+      },
+      {
+        "path": "stimuli/aversive/spider-closeup-4.jpg",
+        "sha256": "sha256:3efb73c5ee44c8e2c2adafc74841d87274e8877c93e065cf62f1306f7c090228"
+      },
+      {
+        "path": "stimuli/aversive/spider-closeup-5.jpg",
+        "sha256": "sha256:975edbb030e716af68f0b9ff389563d0e1f80a9e7fe65e31253e89a16580b909"
+      },
+      {
+        "path": "stimuli/aversive/spider-closeup-6.jpg",
+        "sha256": "sha256:0b2cd315cf7d72ee9add30e244e52c8f54d0cf7d311e054e034b00af0fc1042b"
+      }
+    ]
   }
 }

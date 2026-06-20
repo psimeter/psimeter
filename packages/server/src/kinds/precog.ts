@@ -2,7 +2,7 @@ import {
   MerkleAccumulator,
   canonicalize,
   choiceVocabulary,
-  derivePrecogTarget,
+  derivePresentimentTarget,
   trialCommit,
 } from '@psymeter/core';
 import type { WebSocket, RawData } from 'ws';
@@ -21,15 +21,20 @@ interface PrecogParams {
   beaconRoundOffset: number;
 }
 
+/** A pinned stimulus: a path under /stimuli and the SHA-256 of its bytes (D14). */
+interface Stimulus { path: string; sha256: string; }
+
 /** One persisted trial — the content-addressed record an auditor re-verifies. */
 interface TrialRecord {
   trialIndex: number;
-  choice: string;
+  choice: string; // the operator's predicted valence label
   targetRound: number;
   prevBeaconRound: number;
   beaconValue: string;
   beaconSignature?: string;
-  target: number;
+  valence: number; // 0 = calm, 1 = aversive (derived from B_R)
+  imagePath: string; // the stimulus actually shown
+  imageSha256: string;
   hit: number; // 0 | 1 (integer for canonical parity)
   operatorSig: string;
 }
@@ -57,7 +62,9 @@ export function streamPrecog(
   opts: { blobDir: string },
 ): void {
   const p = ctx.params as unknown as PrecogParams;
-  const vocab = choiceVocabulary(ctx.experiment);
+  const vocab = choiceVocabulary(ctx.experiment); // ['calm','aversive']
+  const stimuli = (ctx.experiment.stimuli ?? {}) as Record<string, Stimulus[]>;
+  const pools: Stimulus[][] = [stimuli[vocab[0]!] ?? [], stimuli[vocab[1]!] ?? []];
   const merkle = new MerkleAccumulator();
   const records: TrialRecord[] = [];
   let hits = 0;
@@ -120,12 +127,14 @@ export function streamPrecog(
     if (now.round >= targetRound) { fail('trial timing violation: target already public'); return; }
 
     const b = await beacon.waitForRound(targetRound);
-    const target = derivePrecogTarget(b.value, trialIndex, p.optionsPerTrial);
-    const hit = vocab.indexOf(choice) === target ? 1 : 0;
+    const { valence, imageIndex } = derivePresentimentTarget(b.value, trialIndex, pools[0]!.length, pools[1]!.length);
+    const image = pools[valence]![imageIndex]!;
+    const hit = vocab.indexOf(choice) === valence ? 1 : 0;
     hits += hit;
 
     const rec: TrialRecord = {
-      trialIndex, choice, targetRound, prevBeaconRound, beaconValue: b.value, target, hit, operatorSig: String(m.operatorSig),
+      trialIndex, choice, targetRound, prevBeaconRound, beaconValue: b.value,
+      valence, imagePath: image.path, imageSha256: image.sha256, hit, operatorSig: String(m.operatorSig),
     };
     if (b.signature) rec.beaconSignature = b.signature;
     records.push(rec);
@@ -135,11 +144,11 @@ export function streamPrecog(
       type: 'reveal',
       trialIndex,
       choice,
-      target,
-      targetChoice: vocab[target],
+      valence,
+      targetChoice: vocab[valence],
+      imagePath: image.path,
       hit,
       beaconRound: targetRound,
-      beaconValue: b.value,
       hits,
       completed: trialIndex + 1,
       trialsPerSession: p.trialsPerSession,
