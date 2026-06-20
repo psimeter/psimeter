@@ -8,7 +8,7 @@ import { renderGuide } from './pages/guide';
 import { renderRun } from './pages/run';
 import { renderExperiments } from './pages/experiments';
 import { renderLeaderboard } from './pages/leaderboard';
-import { renderHistory } from './pages/history';
+import { renderProfile } from './pages/profile';
 import { renderVerify } from './pages/verify';
 
 const shell = buildShell();
@@ -24,7 +24,8 @@ const routes: Record<string, Route> = {
   '/run': renderRun,
   '/experiments': renderExperiments,
   '/leaderboard': renderLeaderboard,
-  '/history': renderHistory,
+  '/profile': renderProfile,
+  '/history': renderProfile, // legacy alias
   '/verify': renderVerify,
 };
 

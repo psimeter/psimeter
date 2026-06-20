@@ -4,6 +4,7 @@
 
 import { el } from './ui';
 import { getOperatorPubKey, shortId } from './identity';
+import { fetchPsi } from './api';
 
 export interface Shell {
   root: HTMLElement;
@@ -12,7 +13,6 @@ export interface Shell {
 }
 
 const NAV: ReadonlyArray<{ href: string; label: string }> = [
-  { href: '/run', label: 'Run a session' },
   { href: '/experiments', label: 'Experiments' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/about', label: 'How it works' },
@@ -24,15 +24,19 @@ export function buildShell(): Shell {
     el('a', { href: n.href, 'data-link': true, 'data-path': n.href }, n.label),
   );
 
+  // The chip doubles as the always-visible score (gamification) and the link to
+  // the player's profile. The score badge fills in once the key + psi load.
+  const scoreBadge = el('span', { class: 'chip-score tier-0' }, 'ψ –');
+  const chipId = el('span', { class: 'chip-id' }, '…');
   const chip = el(
     'a',
     {
       class: 'identity-chip',
-      href: '/history',
+      href: '/profile',
       'data-link': true,
-      title: 'Your sessions — tied to this browser key, kept only here (spec D6)',
+      title: 'Your profile — score, history, and ranking, tied to this browser key',
     },
-    '…',
+    [scoreBadge, chipId],
   );
 
   const header = el('header', { class: 'site-header' }, [
@@ -56,16 +60,25 @@ export function buildShell(): Shell {
 
   const root = el('div', { class: 'site' }, [header, outlet, footer]);
 
-  // Fill the identity chip once the key is derived (async WebCrypto).
+  // Fill the identity chip once the key is derived (async WebCrypto), then load
+  // the live score so it shows in the header on every page.
   void getOperatorPubKey()
-    .then((pub) => { chip.textContent = `${shortId(pub)}…`; })
-    .catch(() => { chip.textContent = 'key error'; });
+    .then(async (pub) => {
+      chipId.textContent = `${shortId(pub)}…`;
+      try {
+        const psi = await fetchPsi(pub);
+        scoreBadge.textContent = `ψ ${psi.points}`;
+        scoreBadge.className = `chip-score tier-${psi.tier}`;
+        if (psi.isCandidate) scoreBadge.classList.add('candidate');
+      } catch { /* score is best-effort; the chip still links to the profile */ }
+    })
+    .catch(() => { chipId.textContent = 'key error'; });
 
   function setActive(path: string): void {
     for (const a of navLinks) {
       a.classList.toggle('active', a.getAttribute('data-path') === path);
     }
-    chip.classList.toggle('active', path === '/history');
+    chip.classList.toggle('active', path === '/profile' || path === '/history');
   }
 
   return { root, outlet, setActive };

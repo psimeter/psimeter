@@ -205,13 +205,15 @@ export function renderMicroPkRunner(outlet: HTMLElement, info: ExperimentInfo): 
       el('div', { class: 'seal card' }, [
         el('span', { class: 'eyebrow' }, 'Sealed'),
         el('h2', {}, 'Session sealed'),
-        el('p', { class: 'seal-sub' }, 'This run is now an immutable entry in the hash-chained ledger.'),
+        el('p', { class: 'seal-sub' }, 'Your run is now permanently recorded — it can’t be changed or removed.'),
         dl,
         el('div', { class: 'callout warn' }, [
-          el('strong', {}, 'This is not evidence. '),
-          'A deviation this size happens by chance all the time — a single session has essentially no statistical power (spec D4/D13). The real result is the pre-registered aggregate across many sessions and operators. You can verify this exact record yourself by re-running ',
-          el('code', {}, 'analysis/analyze.py'),
-          ' over the published ledger.',
+          el('strong', {}, 'One run is not evidence — and that’s fine. '),
+          'A result like this happens by chance all the time; a single session on its own proves nothing. Your ',
+          el('a', { href: '/profile', 'data-link': true }, 'psi score'),
+          ' is what builds up over many sessions. Want to confirm this exact run is real? Hit ',
+          el('strong', {}, 'Verify'),
+          ' below — it re-checks everything right in your browser.',
         ]),
         el('div', { class: 'actions' }, [
           el('button', { class: 'btn primary', onclick: () => showSetup() }, 'Run another'),

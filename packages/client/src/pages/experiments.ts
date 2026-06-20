@@ -12,11 +12,11 @@ export function renderExperiments(outlet: HTMLElement): Disposer {
   outlet.append(
     el('div', { class: 'page' }, [
       el('div', { class: 'page-head' }, [
-        el('span', { class: 'eyebrow' }, 'Experiments'),
-        el('h1', {}, 'Available experiments'),
+        el('span', { class: 'eyebrow' }, 'Play'),
+        el('h1', {}, 'Choose an experiment'),
       ]),
       el('p', { class: 'section-lede' },
-        'PsyMeter probes one question — can the mind influence or foresee genuinely random events? — through several experiments, each a different angle on it. Every experiment runs on the same verifiable, pre-committed protocol. Here\'s what\'s live so far:'),
+        'Each experiment is a different way to test the same question: can your mind nudge — or sense — something genuinely random? Pick one that appeals to you and give it a go. New to this? Either one is a fine place to start.'),
       body,
     ]),
   );
@@ -24,12 +24,7 @@ export function renderExperiments(outlet: HTMLElement): Disposer {
   void fetchExperiments()
     .then((exps) => {
       if (disposed) return;
-      const cards: HTMLElement[] = exps.map(card);
-      cards.push(
-        el('p', { class: 'faint', style: 'margin-top:6px' },
-          'Next: two-color precognition — choose a color before the target is derived from a future public beacon (spec §7.5).'),
-      );
-      body.replaceChildren(...cards);
+      body.replaceChildren(...exps.map(card));
     })
     .catch((e) => { if (!disposed) body.replaceChildren(errorBox(e)); });
 
@@ -40,10 +35,7 @@ function card(d: ExperimentInfo): HTMLElement {
   const runHref = `/run?experiment=${encodeURIComponent(d.id)}&v=${d.version}`;
   return el('div', { class: 'card' }, [
     el('div', { class: 'row-between' }, [
-      el('div', { class: 'row', style: 'gap:10px;align-items:center' }, [
-        el('h2', { style: 'margin:0;font-size:18px' }, d.title),
-        el('span', { class: 'badge' }, `${d.id} · v${d.version}`),
-      ]),
+      el('h2', { style: 'margin:0;font-size:18px' }, d.title),
       el('span', { class: 'badge good dot' }, 'live'),
     ]),
     el('div', { class: 'stat-row', style: 'margin:16px 0' }, [
@@ -72,7 +64,7 @@ function facts(d: ExperimentInfo): HTMLElement {
         ? [
             ['trial', `1 of ${p.optionsPerTrial} options`],
             ['session', `${p.trialsPerSession} trials · ${p.sessionSeconds}s`],
-            ['target', `future drand round (+${p.beaconRoundOffset})`],
+            ['target', 'a future public draw'],
           ]
         : Object.entries(p).map(([k, v]) => [k, String(v)] as [string, string]);
   for (const [k, v] of rows) dl.append(el('dt', {}, k), el('dd', {}, v));

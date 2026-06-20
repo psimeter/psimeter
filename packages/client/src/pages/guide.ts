@@ -65,7 +65,7 @@ const STEPS: Step[] = [
       'Crossing the threshold doesn\'t prove anything by itself — it flags you for the real test: a fresh, ',
       el('strong', {}, 'pre-registered, fixed-N replication'),
       ' agreed in advance. If you want to take that step, the optional contact form on your ',
-      el('a', { href: '/history', 'data-link': true }, 'history page'),
+      el('a', { href: '/profile', 'data-link': true }, 'profile'),
       ' lets you reach the researcher. It\'s the one place you choose to step out of anonymity.',
     ],
   },

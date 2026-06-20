@@ -22,7 +22,7 @@ export function renderVerify(outlet: HTMLElement, query: URLSearchParams): Dispo
   if (!id) {
     page.append(head, el('p', { class: 'dim' }, [
       'Open a session from your ',
-      el('a', { href: '/history', 'data-link': true }, 'history'),
+      el('a', { href: '/profile', 'data-link': true }, 'profile'),
       ' or the leaderboard to verify it here.',
     ]));
     return () => { disposed = true; };

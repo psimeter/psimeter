@@ -24,9 +24,9 @@ const CHAIN: Step[] = [
     n: '2',
     title: 'Anchor it to a public beacon',
     body: [
-      'That fresh value comes from ',
-      el('strong', {}, 'drand'),
-      ', a public beacon that publishes a new, unpredictable value every few seconds. Because it didn\'t exist until moments before your run, your session cannot have been precomputed or cherry-picked from a pool of favourable results.',
+      'That fresh value comes from a ',
+      el('strong', {}, 'public randomness beacon'),
+      ' that publishes a new, unpredictable value every few seconds. Because it didn\'t exist until moments before your run, your session can\'t have been prepared in advance or cherry-picked from a pile of favourable results.',
     ],
   },
   {
@@ -43,8 +43,8 @@ const CHAIN: Step[] = [
     title: 'Pin the data as it is produced',
     body: [
       'Each batch of raw bits is folded into a running ',
-      el('strong', {}, 'Merkle commitment'),
-      '. The final value commits to the entire stream, so afterward no bit can be swapped, dropped, or selectively kept. The raw stream itself is saved, addressed by its own hash.',
+      el('strong', {}, 'fingerprint'),
+      '. The final value locks in the whole stream, so afterward no bit can be swapped, dropped, or quietly left out. The raw stream itself is saved too.',
     ],
   },
   {
@@ -58,13 +58,13 @@ const CHAIN: Step[] = [
   },
   {
     n: '6',
-    title: 'Reproduce the analysis yourself',
+    title: 'Check the result yourself',
     body: [
-      'All raw data and a deterministic analysis script are public. Anyone re-runs ',
-      el('code', {}, 'analysis/analyze.py'),
-      ' and gets identical numbers. The score you see during a run is ',
-      el('strong', {}, 'display only'),
-      ' — the authoritative statistics are computed independently, never by the live server.',
+      'All the raw data and a public analysis script are open to everyone. Anyone can re-run the numbers and get exactly the same answer. The score you see during a run is ',
+      el('strong', {}, 'just for show'),
+      ' — the official numbers are worked out separately, never by us. (The how-to lives in the ',
+      el('a', { href: '/faq', 'data-link': true }, 'FAQ'),
+      '.)',
     ],
   },
 ];

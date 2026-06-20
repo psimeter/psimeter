@@ -587,6 +587,20 @@ textarea.fld { resize: vertical; }
 .good-text { color: var(--good) !important; }
 .danger-text { color: var(--danger) !important; }
 
+/* header score badge (gamification — always visible) */
+.identity-chip { gap: 8px; }
+.chip-score { font-weight: 700; letter-spacing: 0.01em; padding-right: 8px; border-right: 1px solid var(--line); color: var(--text-dim); }
+.chip-score.tier-1 { color: var(--text); }
+.chip-score.tier-2 { color: var(--accent-bright); }
+.chip-score.tier-3 { color: var(--warn-soft); }
+.chip-score.tier-4, .chip-score.candidate { color: var(--good); }
+.chip-id { color: var(--text-dim); }
+
+/* profile: rank card, score-over-time chart */
+.rank-card .row-between { align-items: center; }
+.btn.sm { padding: 6px 11px; font-size: 12.5px; border-radius: 8px; }
+.trend { width: 100%; height: auto; display: block; }
+
 /* verification view */
 .verdict { display: flex; align-items: center; gap: 22px; padding: 20px 22px; border-radius: var(--radius-lg);
   border: 1px solid var(--line); background: var(--bg-1); flex-wrap: wrap; }

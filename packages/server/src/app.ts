@@ -140,6 +140,16 @@ export function createApp(): http.Server {
         sendJson(res, 200, leaderboard(reader.summaries()));
         return;
       }
+      // Lightweight per-operator psi score (for the always-visible header chip).
+      if (path === '/api/psi') {
+        const operator = url.searchParams.get('operator');
+        if (!operator) {
+          sendJson(res, 400, { error: 'operator required' });
+          return;
+        }
+        sendJson(res, 200, { psi: psiForOperator(reader.summaries(), operator) });
+        return;
+      }
       const detailMatch = path.match(SESSION_DETAIL_ROUTE);
       if (detailMatch) {
         handleSessionDetail(res, reader, detailMatch[1]!);

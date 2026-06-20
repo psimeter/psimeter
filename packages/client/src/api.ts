@@ -301,11 +301,21 @@ export interface HistoryResult {
   psi: PsiScore | null;
 }
 
-export async function fetchSessions(operator?: string): Promise<HistoryResult> {
-  const query = operator ? `?operator=${encodeURIComponent(operator)}` : '';
-  const res = await fetch(`/api/sessions${query}`);
+export async function fetchSessions(operator?: string, limit?: number): Promise<HistoryResult> {
+  const params = new URLSearchParams();
+  if (operator) params.set('operator', operator);
+  if (limit) params.set('limit', String(limit));
+  const qs = params.toString();
+  const res = await fetch(`/api/sessions${qs ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error('could not load sessions');
   return (await res.json()) as HistoryResult;
+}
+
+/** Just this operator's psi score — small payload for the always-visible header chip. */
+export async function fetchPsi(operator: string): Promise<PsiScore> {
+  const res = await fetch(`/api/psi?operator=${encodeURIComponent(operator)}`);
+  if (!res.ok) throw new Error('could not load psi');
+  return ((await res.json()) as { psi: PsiScore }).psi;
 }
 
 // ---------- psi leaderboard + candidate contact (spec D15 / H1) ----------
