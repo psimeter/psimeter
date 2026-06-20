@@ -289,6 +289,53 @@ body.focus .site-footer { display: none; }
 .callout.closing { margin-top: 40px; line-height: 2; }
 .callout.closing .btn { vertical-align: middle; margin-left: 6px; }
 
+/* "go deeper" link cards (about) */
+.linkcard { display: block; transition: border-color .15s, background .15s, transform .05s; }
+.linkcard:hover { border-color: #2c3a4c; background: var(--bg-2); text-decoration: none; transform: translateY(-1px); }
+.linkcard h3 { margin: 0 0 6px; font-size: 16px; color: var(--accent-bright); }
+.linkcard p { margin: 0; color: var(--text-dim); font-size: 13.5px; }
+
+/* ---------- FAQ ---------- */
+.faq-toc { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 20px 0 0; font-size: 13.5px; }
+.faq-toc a { color: var(--text-dim); }
+.faq-toc a:hover { color: var(--text); }
+.faq-group { margin-top: 8px; scroll-margin-top: 80px; }
+.faq-item { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); margin: 8px 0; padding: 0 16px; }
+.faq-item summary {
+  cursor: pointer; padding: 14px 0; font-weight: 600; font-size: 14.5px; color: var(--text);
+  list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: "+"; color: var(--accent); font-family: var(--mono); font-size: 18px; flex: none; }
+.faq-item[open] summary::after { content: "\2013"; }
+.faq-item[open] summary { border-bottom: 1px solid var(--line-soft); }
+.faq-a { padding: 12px 0 16px; color: #cdd6e2; font-size: 14px; line-height: 1.6; }
+.faq-a p { margin: 0 0 10px; color: #cdd6e2; }
+.faq-a .codeblock { margin: 10px 0; }
+.refs { margin: 8px 0 12px; padding-left: 18px; }
+.refs li { margin: 8px 0; color: var(--text-dim); font-size: 13.5px; }
+.refs strong { color: var(--text); }
+
+/* ---------- guide ---------- */
+.guide-steps { display: grid; gap: 12px; margin: 4px 0 8px; }
+.guide-step { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
+.guide-step .n {
+  width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+  font-family: var(--mono); font-weight: 650; font-size: 15px;
+  color: var(--accent-bright); background: var(--accent-deep); border: 1px solid #2a3d5e;
+}
+.guide-step h3 { margin: 4px 0 6px; font-size: 16px; }
+.guide-step p { margin: 0; color: #cdd6e2; font-size: 14px; }
+.guide-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 4px 0 18px; }
+.guide-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.guide-table th {
+  text-align: left; padding: 11px 14px; background: var(--bg-2); color: var(--text-dim);
+  font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--line);
+}
+.guide-table td { padding: 11px 14px; border-bottom: 1px solid var(--line-soft); color: #cdd6e2; }
+.guide-table tbody tr:last-child td { border-bottom: none; }
+.guide-table strong { color: var(--text); }
+
 /* ---------- home / hero ---------- */
 /* Ambient three.js network sits fixed behind the content; a veil keeps the
    hero text readable. Both are torn down when the route changes. */

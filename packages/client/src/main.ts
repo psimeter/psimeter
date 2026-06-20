@@ -3,6 +3,8 @@ import { buildShell } from './shell';
 import { initRouter, type Route } from './router';
 import { renderHome } from './pages/home';
 import { renderAbout } from './pages/about';
+import { renderFaq } from './pages/faq';
+import { renderGuide } from './pages/guide';
 import { renderRun } from './pages/run';
 import { renderExperiments } from './pages/experiments';
 import { renderLeaderboard } from './pages/leaderboard';
@@ -17,6 +19,8 @@ app.replaceChildren(shell.root);
 const routes: Record<string, Route> = {
   '/': renderHome,
   '/about': renderAbout,
+  '/faq': renderFaq,
+  '/guide': renderGuide,
   '/run': renderRun,
   '/experiments': renderExperiments,
   '/leaderboard': renderLeaderboard,

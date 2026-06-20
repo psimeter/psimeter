@@ -16,6 +16,7 @@ const NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: '/experiments', label: 'Experiments' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/about', label: 'How it works' },
+  { href: '/faq', label: 'FAQ' },
 ];
 
 export function buildShell(): Shell {

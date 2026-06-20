@@ -27,7 +27,7 @@ export function renderLeaderboard(outlet: HTMLElement): Disposer {
         el('i', {}, 'consistently'),
         ', in the direction they declared, across their own sessions — not whether they had one lucky run. ',
         'It is an anytime-valid ',
-        el('a', { href: '/about', 'data-link': true }, 'test-martingale'),
+        el('a', { href: '/faq', 'data-link': true }, 'test-martingale'),
         ' (the “odds against chance” you turned your evidence into), shown in points: every ×10 of evidence is +10 points.',
       ]),
       el('div', { class: 'callout warn' }, [
@@ -35,7 +35,7 @@ export function renderLeaderboard(outlet: HTMLElement): Disposer {
         'Crossing the candidate threshold ',
         el('b', {}, 'flags'),
         ' a person for a separate, pre-registered, fixed-N replication. Across many players, some candidates are expected by chance, which is exactly why a candidate must replicate before anything is claimed (',
-        el('a', { href: '/about', 'data-link': true }, 'why'),
+        el('a', { href: '/faq', 'data-link': true }, 'why'),
         ').',
       ]),
       body,

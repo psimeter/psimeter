@@ -121,8 +121,11 @@ function contactCard(pub: string): HTMLElement {
       el('span', { class: 'psi-badge tier-4 candidate' }, 'Candidate ★'),
       el('h2', { style: 'margin:8px 0 0;font-size:18px' }, 'You’ve been flagged as a candidate'),
     ]),
-    el('p', { class: 'dim', style: 'margin:8px 0 0' },
-      'Your psi score crossed the threshold. This is a screening flag, not proof — the next step is a separate, pre-registered replication. If you’d like to be part of that, you can voluntarily share a way to reach you.'),
+    el('p', { class: 'dim', style: 'margin:8px 0 0' }, [
+      'Your psi score crossed the threshold. This is a screening flag, not proof — the next step is a separate, pre-registered replication (',
+      el('a', { href: '/guide', 'data-link': true }, 'what that means'),
+      '). If you’d like to be part of that, you can voluntarily share a way to reach you.',
+    ]),
     el('div', { class: 'callout', style: 'margin:14px 0' }, [
       el('strong', {}, 'This breaks your anonymity, on purpose. '),
       'Everything up to here is pseudonymous. Submitting reveals your chosen contact detail to the researcher (and nobody else). It is stored privately, off the public ledger, and you can ignore this entirely.',
