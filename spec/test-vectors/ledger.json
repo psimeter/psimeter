@@ -1,0 +1,36 @@
+{
+  "_about": "Normative known-answer vectors for section 9 (Ledger format). entryHash = SHA256(PCJ({seq,ts,prevHash,type,payload})); entryHash itself is excluded. A verifier MUST recompute each entryHash and check the seq/prevHash linkage. `ts` is fixed here for determinism; in production it is informational only.",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "9",
+  "requirements": [
+    "PSI-LEDGER-1",
+    "PSI-LEDGER-2",
+    "PSI-LEDGER-3",
+    "PSI-LEDGER-4"
+  ],
+  "genesisPrev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "chain": [
+    {
+      "seq": 0,
+      "ts": "2026-01-01T00:00:00.000Z",
+      "prevHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "type": "genesis",
+      "payload": {
+        "note": "psimeter dev ledger"
+      },
+      "entryHash": "sha256:26a8b52493d2249c2c1c6b984cc93d80a1fd6fec58c407dd82aae0de547631f9"
+    },
+    {
+      "seq": 1,
+      "ts": "2026-01-01T00:00:01.000Z",
+      "prevHash": "sha256:26a8b52493d2249c2c1c6b984cc93d80a1fd6fec58c407dd82aae0de547631f9",
+      "type": "session.open",
+      "payload": {
+        "sessionId": "s1",
+        "intention": "HIGH"
+      },
+      "entryHash": "sha256:3849ee569f60ade1bed579d29124936446451e762a82d9f2d2d0c471022e0fc4"
+    }
+  ]
+}

@@ -43,7 +43,7 @@
 - [Appendix A. Test vectors](#appendix-a-test-vectors)
 - [Appendix B. Design rationale](#appendix-b-design-rationale)
 
-> **Drafting status.** Sections 1–7, 16, and 17 are written. Sections 8–15 are present as scoped
+> **Drafting status.** Sections 1–10, 16, and 17 are written. Sections 11–15 are present as scoped
 > stubs that name the source material, the implementing module, and the frozen golden vectors
 > they will formalize; they are being filled in section order. Nothing in a stub is normative
 > yet.
@@ -407,27 +407,164 @@ KAT over the example precommit).
 
 ## 8. Public-beacon binding
 
-> *Stub — to be written.* Will specify the `BeaconRef` object, the use of drand **quicknet**
-> (unchained, 3 s), and the requirement to **BLS-verify** each pulse against the hardcoded group
-> public key before binding it — never trusting the beacon endpoint for authenticity.
-> Source: legacy §7, D2; the server beacon module.
+Every session binds a **public randomness beacon** pulse, fetched at pre-commitment time, into the
+PrecommitInput (§7). Because the pulse's value did not exist before it was published, the bound
+session provably could not have been pre-computed earlier — closing off a server that pre-generates
+a library of runs and keeps only the flattering ones (G4).
+
+### 8.1 BeaconRef
+
+A pulse is recorded as a canonical object:
+
+| Member | Type | Notes |
+|---|---|---|
+| `source` | string | beacon identifier (e.g. `drand`) |
+| `round` | integer | the pulse's round number |
+| `value` | string | the published randomness (hex) |
+| `chainHash` | string | OPTIONAL beacon chain identifier (hex) |
+| `signature` | string | OPTIONAL pulse signature (hex) |
+
+- **[PSI-BEACON-1]** A confirmatory session MUST bind a pulse from a public beacon whose value was
+  not predictable at pre-commitment time. The pulse MUST be recorded as a BeaconRef and is part of
+  the PrecommitInput (§7.1), so it is covered by both the pre-commitment hash and the operator
+  signature.
+
+### 8.2 drand quicknet (the confirmatory beacon)
+
+The confirmatory beacon is **drand quicknet** (League of Entropy): an *unchained* scheme with a
+3-second period and short BLS signatures.
+
+- **[PSI-BEACON-2]** Before binding a quicknet pulse, an implementation MUST verify the pulse's BLS
+  signature and MUST refuse to bind one that fails. The endpoint serving the pulse MUST NOT be
+  trusted for authenticity — only the signature check is.
+- **[PSI-BEACON-3]** Verification is: the signed message is `SHA-256(round)`, where `round` is the
+  8-octet big-endian encoding of the round number; the signature is a short signature on G1 and the
+  group public key is on G2 of the BLS12-381 curve. (Unchained ⇒ the message is the round alone,
+  with no dependence on a previous signature.)
+
+The trust anchors (independently checkable against the published quicknet parameters) are:
+
+```
+chain hash : 52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971
+group key  : 83cf0f2896adee7eb8b5f01fcad3912212c437e0073e911fb90022d3e760183c
+             8c4b450b6a0a6c3ac6a5776a2d1064510d1fec758c921cc22b0e17e63aaf4bcb
+             5ed66304de9cf809bd274ca73bab4af5a6e9c76a4bc09e76eae8991ef5ece45a
+```
+
+- **[PSI-BEACON-4]** A development beacon MAY be used for offline testing but is
+  **non-confirmatory**: it provides no freshness guarantee, and sessions bound to it MUST NOT enter
+  any confirmatory corpus.
+
+*Reference:* the server beacon module (`beacon.ts`); verification uses BLS12-381. *Precognition
+binds a **future** quicknet round; see §11.2.*
 
 ## 9. Ledger format
 
-> *Stub — to be written.* Will specify the entry envelope (`seq`, `ts`, `prevHash`, `type`,
-> `payload`, `entryHash`), the chaining rule `entryHash = H(PCJ(seq, ts, prevHash, type,
-> payload))`, the entry types (`genesis`, `session.open`, `session.seal`, `baseline.seal`,
-> `external.anchor`, `witness.anchor`), and the `session.open`/`session.seal` payloads (including
-> the additive, optional witness fields). The Ed25519 key/signature octet encoding (§5.3) is
-> pinned here. Source: legacy §8.5; [`ledger.ts`](../packages/core/src/ledger.ts),
-> [`types.ts`](../packages/core/src/types.ts). JSON Schemas → [`../schema/`](../schema/).
+The **ledger** is the append-only, hash-chained log of every entry. It is what makes the corpus
+tamper-evident: nothing can be silently inserted, removed, reordered, or backdated (G5).
+
+### 9.1 Entry envelope
+
+| Member | Type | Notes |
+|---|---|---|
+| `seq` | integer | 0 for genesis, then strictly +1 |
+| `ts` | string | ISO-8601 timestamp; **informational only** — the beacon is the trusted time |
+| `prevHash` | hash string | the previous entry's `entryHash`; `GENESIS_PREV` for the first |
+| `type` | string | entry type (§9.3) |
+| `payload` | object | type-specific (§9.4) |
+| `entryHash` | hash string | `H(PCJ({seq, ts, prevHash, type, payload}))` |
+
+- **[PSI-LEDGER-1]** `entryHash = H(PCJ({seq, ts, prevHash, type, payload}))` — the canonical object
+  over exactly those five members (note `entryHash` itself is excluded). Emitted as a hash string.
+- **[PSI-LEDGER-2]** The first entry has `seq = 0` and `prevHash = GENESIS_PREV`, where
+  `GENESIS_PREV` is `sha256:` followed by sixty-four `0` characters.
+- **[PSI-LEDGER-3]** Each subsequent entry MUST have `seq` exactly one greater than its predecessor
+  and `prevHash` equal to the predecessor's `entryHash`.
+
+### 9.2 Chain verification
+
+- **[PSI-LEDGER-4]** For every entry in order, a verifier MUST check (a) `seq` is the expected
+  value, (b) `prevHash` equals the previous entry's `entryHash` (or `GENESIS_PREV` at index 0), and
+  (c) the recomputed `entryHash` (PSI-LEDGER-1) equals the stored value. Any failure breaks the
+  chain at that entry and the corpus MUST be rejected. *(This catches reordering, insertion,
+  deletion, and any payload tampering.)*
+
+### 9.3 Entry types
+
+`genesis` · `session.open` · `session.seal` · `baseline.seal` · `external.anchor` ·
+`witness.anchor`. A sibling feed carries `witness.attest` entries (§13); these never appear in the
+main ledger.
+
+### 9.4 Session payloads
+
+A session is a `session.open` entry followed (after generation) by a `session.seal` entry.
+
+**`session.open`** payload: `sessionId`; `experimentId` (string) and `experimentVersion` (integer)
+identifying the definition (§6), from which a verifier re-derives `experimentHash`; `intention` (the
+committed choice, §7); `operatorPubKey` and `operatorSig` (the key and its signature over
+`precommit`, §7.3); `beacon` (the bound BeaconRef, §8); `entropySource` (`{id, kind, confirmatory,
+metadata}`, recorded verbatim, §10); `serverNonce`; and `precommit` and `anchor` (§7).
+
+**`session.seal`** payload:
+
+| Member | Type | Notes |
+|---|---|---|
+| `sessionId` | string | |
+| `openEntryHash` | hash string | binds back to the `session.open` entry |
+| `outputCommitment` | hash string | Merkle root over the raw stream (§10) |
+| `rawSha256` | hash string | flat SHA-256 of the entire raw stream |
+| `rawBlobRef` | string | content-addressed reference to the persisted raw stream |
+| `leafBytes` | integer | Merkle leaf size in octets, for re-verification (§10) |
+| `nSamples` | integer | total bits generated |
+| `ones` | integer | count of 1-bits (the display z is derived from these, never stored) |
+| `witnessed`, `witness`, `checkpoints` | — | OPTIONAL additive witness fields (§13); absent ⇒ byte-identical to an un-witnessed seal |
+
+- **[PSI-LEDGER-5]** A `session.seal` payload MUST NOT contain derived real-valued statistics (e.g.
+  a z-score). Only the integer counts (`ones`, `nSamples`) are stored; all statistics are recomputed
+  at analysis time (§3.2, §12.1).
+
+`external.anchor` entries publish the current head hash with its external timestamp proofs (RFC 3161
+TSA / git / OpenTimestamps); `witness.anchor` entries cross-bind the witness feed head (§13).
+
+*Reference:* [`ledger.ts`](../packages/core/src/ledger.ts), `session.ts`.
+*Test vectors:* [`test-vectors/ledger.json`](test-vectors/ledger.json). *(JSON Schemas for each
+payload will be published under [`../schema/`](../schema/).)*
 
 ## 10. Generation and output commitment
 
-> *Stub — to be written.* Will specify one-way isolation (PSI-GEN), fixed-N generation with no
-> optional stopping, the streaming Merkle output commitment, checkpoint roots, and
-> content-addressed raw-blob persistence (`blob/sha256-<root>.bin…`). Source: legacy §7.1–§7.2,
-> D3, D10.
+Once the `session.open` is logged, the generator produces the raw random stream and commits to it.
+For micro-PK the channel is **one-way**.
+
+- **[PSI-GEN-1] One-way isolation.** During micro-PK generation the generator MUST NOT read any
+  input from the client; isolation is structural, not a policy. (Precognition is necessarily
+  interactive; its soundness instead comes from binding each target to a *future* beacon round —
+  §11.2.)
+- **[PSI-GEN-2] Fixed N, no optional stopping.** Exactly the number of trials fixed by the
+  hash-bound parameters (§6) MUST be generated; generation MUST NOT stop early or extend, and
+  analysis MUST use the complete run.
+- **[PSI-GEN-3] Raw / unconditioned.** Samples MUST be the raw entropy octets as delivered by the
+  source; implementations MUST NOT whiten or condition them. The exact source (`id`, `kind`,
+  `confirmatory`, `metadata`) is recorded in `session.open` (§9.4).
+- **[PSI-GEN-4] Streaming Merkle commitment.** The stream is committed as it is produced (§5.2): the
+  raw octets are partitioned into consecutive **leaf windows of `leafBytes` octets**, one Merkle
+  leaf each; the Merkle root over the prefix produced so far is emitted progressively as a
+  *checkpoint root*. The final root is the `outputCommitment`.
+- **[PSI-GEN-5] Content-addressed raw blob.** The full raw stream MUST be persisted and referenced
+  by `rawBlobRef`; `rawSha256` is the flat SHA-256 of the whole stream. A verifier recomputes both
+  `rawSha256` and the Merkle `outputCommitment` (using `leafBytes`) from the blob and checks them
+  against the seal (§14).
+- **[PSI-GEN-6] Frozen trial mapping.** The mapping from raw octets to trials (e.g. a trial =
+  `trialBits` raw bits) is fixed by the definition's parameters and MUST NOT change after
+  publication (D10).
+
+### 10.1 Timing is not committed (Informative)
+
+The stream may be paced for the human experience (a visual cadence), but the pacing interval is
+**not** a committed parameter and does not affect the statistics: validity depends only on
+collecting the fixed number of independent samples, never on wall-clock regularity. Event-loop
+jitter or GC pauses can perturb the animation, never the bit counts.
+
+*Reference:* [`microPk.ts`](../packages/server/src/kinds/microPk.ts).
 
 ## 11. Experiment kinds
 
@@ -542,6 +679,7 @@ cross-language byte-parity (G6) becomes a CI gate.
 | [`primitives.json`](test-vectors/primitives.json) | §5 | present |
 | [`experiment.json`](test-vectors/experiment.json) | §6 | present |
 | [`precommit.json`](test-vectors/precommit.json) | §7 | present |
+| [`ledger.json`](test-vectors/ledger.json) | §9 | present |
 | `presentiment.json` | §11.2 | planned |
 | `psi-score.json` | §12 | planned |
 | `witness.json` | §13 | planned |
