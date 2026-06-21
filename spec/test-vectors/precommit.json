@@ -1,0 +1,48 @@
+{
+  "_about": "Normative known-answer vectors for section 7 (Pre-commitment and anchor). precommit = SHA256(PCJ(PrecommitInput)); anchor = 60-bit Crockford base32 of the precommit digest, grouped XXXX-XXXX-XXXX. The operator signature (section 7.4) is Ed25519 over the UTF-8 bytes of the precommit hash string; the signature vector below uses a TEST seed and MUST NOT be used in production.",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "7",
+  "requirements": [
+    "PSI-PRECOMMIT-1",
+    "PSI-PRECOMMIT-2",
+    "PSI-PRECOMMIT-3",
+    "PSI-PRECOMMIT-4",
+    "PSI-ANCHOR-1",
+    "PSI-ANCHOR-2",
+    "PSI-SIG-3"
+  ],
+  "precommit": [
+    {
+      "id": "micropk-baseline",
+      "input": {
+        "experimentId": "binary-micropk",
+        "experimentVersion": 1,
+        "experimentHash": "sha256:ab17b4de0bb85f1e8ccc0fd8c1b357cf044087a79e0df358959b37a6fcc96d07",
+        "intention": "HIGH",
+        "operatorPubKey": "ed25519:abc",
+        "beacon": {
+          "source": "drand",
+          "round": 1,
+          "value": "ff"
+        },
+        "sessionId": "s1",
+        "serverNonce": "n1",
+        "prevHash": "sha256:84fd9bac333ad79154348296204fa7f8c537a96e08983e5f73b3f5aca8e8edf7"
+      },
+      "canonical": "{\"beacon\":{\"round\":1,\"source\":\"drand\",\"value\":\"ff\"},\"experimentHash\":\"sha256:ab17b4de0bb85f1e8ccc0fd8c1b357cf044087a79e0df358959b37a6fcc96d07\",\"experimentId\":\"binary-micropk\",\"experimentVersion\":1,\"intention\":\"HIGH\",\"operatorPubKey\":\"ed25519:abc\",\"prevHash\":\"sha256:84fd9bac333ad79154348296204fa7f8c537a96e08983e5f73b3f5aca8e8edf7\",\"serverNonce\":\"n1\",\"sessionId\":\"s1\"}",
+      "precommit": "sha256:b227153c997510ed4ea20331c4ff6b4e9482c0997d2d46d7568d84c5c275595e",
+      "anchor": "P8KH-AF4S-EM8E"
+    }
+  ],
+  "operatorSignature": [
+    {
+      "id": "ed25519-over-precommit",
+      "note": "TEST seed only",
+      "secretSeedHex": "0101010101010101010101010101010101010101010101010101010101010101",
+      "operatorPubKey": "ed25519:8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+      "message": "sha256:b227153c997510ed4ea20331c4ff6b4e9482c0997d2d46d7568d84c5c275595e",
+      "operatorSig": "ed25519:a1a18dfa23d06aa03bfd01648e6d12f8e44d395f28c938b60383ed890804947f8801cd015b7a4a52054f681bf46bad29ef5ac1af5fca414a46e81da0e5fa1e04"
+    }
+  ]
+}

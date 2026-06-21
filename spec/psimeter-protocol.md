@@ -43,7 +43,7 @@
 - [Appendix A. Test vectors](#appendix-a-test-vectors)
 - [Appendix B. Design rationale](#appendix-b-design-rationale)
 
-> **Drafting status.** Sections 1–5, 16, and 17 are written. Sections 6–15 are present as scoped
+> **Drafting status.** Sections 1–7, 16, and 17 are written. Sections 8–15 are present as scoped
 > stubs that name the source material, the implementing module, and the frozen golden vectors
 > they will formalize; they are being filled in section order. Nothing in a stub is normative
 > yet.
@@ -275,9 +275,13 @@ reinterpreted as an internal node.
 
 - **[PSI-SIG-1]** Operator and witness signatures are **Ed25519** [RFC 8032].
 - **[PSI-SIG-2]** Public keys and signatures are carried as tagged strings of the form
-  `ed25519:<encoding>`. The exact octet encoding and the precise message bytes signed in each
-  context are specified where they are used: the operator pre-commitment signature in §7, the
-  per-trial choice signature in §11.2, and witness attestations in §13.
+  `ed25519:<lower-hex>`: a public key is 32 octets (64 hex digits) and a signature is 64 octets
+  (128 hex digits).
+- **[PSI-SIG-3]** Unless a context states otherwise, a signature is computed over the **UTF-8
+  octets of the referenced message string** — typically a `sha256:` hash string (§5.1), signed as
+  text, *not* over the raw digest octets. Each signing context names its message: the operator
+  pre-commitment signature (§7.3), the per-trial choice signature (§11.2), and witness
+  attestations (§13).
 
 *Test vectors for signature-bearing constructions ship with their sections (§7, §13).*
 
@@ -285,21 +289,121 @@ reinterpreted as an internal node.
 
 ## 6. Experiment definitions
 
-> *Stub — to be written.* Will formalize the `ExperimentDefinition` object (`id`, integer
-> `version`, `kind`, `params`, `intentions`/`choices`, optional `stimuli`/`contentWarning`) and
-> its content hash `experimentHash = H(PCJ(definition))`, including the immutability/versioning
-> discipline (D13) and the hash-stability of omitted optional fields (via PSI-CANON-4).
-> Source: legacy §6 D13, §8.5; [`experiment.ts`](../packages/core/src/experiment.ts).
-> Golden vectors (already frozen in the core tests) → `test-vectors/experiment.json`.
+An **experiment definition** is the versioned, immutable, content-addressed parameter set a
+session runs under. Its hash is bound into every pre-commitment (§7), pinning the exact parameters
+without inlining them.
+
+### 6.1 The definition object
+
+| Member | Type | Notes |
+|---|---|---|
+| `id` | string | stable experiment identifier |
+| `version` | integer | incremented on any change (§6.1) |
+| `title` | string | human label |
+| `kind` | string | the experiment kind (§11): `micro-pk-binary` or `precognition-presentiment` |
+| `params` | object | kind-specific parameters (integers/strings only) |
+| `intentions` | array of string | committable vocabulary for micro-PK (`HIGH`/`LOW`/`BASELINE`); OPTIONAL |
+| `choices` | array of string | committable vocabulary for other kinds; OPTIONAL |
+| `stimuli` | object | OPTIONAL kind-specific presentation data, frozen per version |
+
+- **[PSI-EXP-1]** A definition MUST contain `id` (string), `version` (integer ≥ 1), `title`
+  (string), `kind` (string, one of the registered kinds, §11), and `params` (object). It MUST
+  contain at least one of `intentions` or `choices`, each an array of strings giving the
+  committable choice vocabulary. It MAY contain `stimuli`. The vocabulary in effect is `choices`
+  if present, otherwise `intentions`, so a verifier reads either uniformly.
+- **[PSI-EXP-2]** Every value within `params` and `stimuli` MUST satisfy §4 (integers and strings
+  only, nested in arrays/objects). Real-valued quantities (e.g. a trial's standard deviation) MUST
+  NOT be stored; they are derived from the integers at analysis time.
+- **[PSI-EXP-3]** The experiment hash is `experimentHash = H(PCJ(definition))` (§4, §5.1), emitted
+  as a hash string.
+- **[PSI-EXP-4]** A definition is immutable once published. Any change to any member MUST increment
+  `version`, which changes `experimentHash`. Two sessions whose definitions differ in
+  `experimentHash` MUST NOT be pooled in a single confirmatory analysis. *(Because §4 omits absent
+  members, introducing a new OPTIONAL member to the schema does not change the hash of definitions
+  that omit it — the format can grow without invalidating sealed sessions.)*
+
+### 6.2 Example
+
+The abbreviated `binary-micropk` test definition canonicalizes (§4) to
+
+```
+{"id":"binary-micropk","intentions":["HIGH","LOW","BASELINE"],"kind":"micro-pk-binary","params":{"trialBits":200},"title":"test","version":1}
+```
+
+giving `experimentHash = sha256:ab17b4de…`. Changing `params.trialBits` to `201` yields a
+different hash (`sha256:0a9e21cf…`), partitioning the corpus.
+
+*Reference:* [`experiment.ts`](../packages/core/src/experiment.ts).
+*Test vectors:* [`test-vectors/experiment.json`](test-vectors/experiment.json).
 
 ## 7. Pre-commitment and anchor
 
-> *Stub — to be written.* Will define the canonical `PrecommitInput` member set, the construction
-> `precommit = H(PCJ(PrecommitInput))`, and the 60-bit Crockford-base32 anchor
-> (`XXXX-XXXX-XXXX`). **Replaces** the informal `H(a ‖ b ‖ c)` notation of legacy §7.2/D2 with the
-> actual canonical-object construction. Defines the operator signature `Sign(precommit)`.
-> Source: legacy §7.2, D2; [`commitment.ts`](../packages/core/src/commitment.ts).
-> Golden vectors (`experimentHash`, `precommit`, `anchor` format) → `test-vectors/precommit.json`.
+Before any randomness relevant to a session exists, the operator's decision and the session's full
+context are frozen into one hash — the **pre-commitment** — from which a short human **anchor** is
+derived. This is what makes each session pre-registered at the per-session level (G3) and is the
+focal artifact the operator records.
+
+### 7.1 The pre-commitment input
+
+The pre-commitment is taken over a JSON object, the **PrecommitInput**:
+
+| Member | Type | Notes |
+|---|---|---|
+| `experimentId` | string | the definition's `id` (§6) |
+| `experimentVersion` | integer | the definition's `version` |
+| `experimentHash` | hash string | pins the exact parameters (§6) |
+| `intention` | string | the committed choice (§6 vocabulary); per-trial kinds commit `""` (§11.2) |
+| `operatorPubKey` | string | `ed25519:<hex>` (§5.3) |
+| `beacon` | object | the bound beacon pulse (§8), itself canonical: `{source, round, value, …}` |
+| `sessionId` | string | unique session identifier |
+| `serverNonce` | string | server-chosen nonce |
+| `prevHash` | hash string | the ledger head at commit time (§9) |
+
+- **[PSI-PRECOMMIT-1]** A PrecommitInput MUST contain exactly the members above and no others;
+  `beacon` is a nested canonical object (§8). All values MUST satisfy §4.
+- **[PSI-PRECOMMIT-2]** The pre-commitment is `precommit = H(PCJ(PrecommitInput))` (§4, §5.1),
+  emitted as a hash string. Because §4 sorts member names, this is a hash over the **canonical
+  object**, not a field concatenation; the canonical member order is `beacon, experimentHash,
+  experimentId, experimentVersion, intention, operatorPubKey, prevHash, serverNonce, sessionId`.
+  *(This supersedes the informal `H(a ‖ b ‖ c)` notation of the legacy design doc.)*
+- **[PSI-PRECOMMIT-3]** The committed-decision member MUST be named `intention` for every kind (its
+  value is a generic string), so micro-PK and per-trial kinds share one commitment format and
+  previously sealed sessions stay byte-stable.
+
+### 7.2 The anchor
+
+- **[PSI-ANCHOR-1]** The anchor encodes the **first 60 bits** (first 15 hex digits) of the
+  precommit digest as twelve Crockford base-32 symbols over the alphabet
+  `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (no `I`, `L`, `O`, `U`); each group of 5 bits maps to one
+  symbol, most-significant first.
+- **[PSI-ANCHOR-2]** The twelve symbols MUST be displayed as three hyphen-separated groups of four:
+  `XXXX-XXXX-XXXX`. The encoding is deterministic; input is case-insensitive.
+
+The anchor is a human-checkable fingerprint of the *whole commitment* — intention, parameters,
+identity, and freshness — not of a "seed". The operator records it as independent proof of exactly
+what was committed.
+
+### 7.3 Operator signature
+
+- **[PSI-PRECOMMIT-4]** The operator MUST sign the pre-commitment with their Ed25519 key (§5.3,
+  [PSI-SIG-3]): the signed message is the **UTF-8 octets of the `precommit` hash string**. The
+  resulting `operatorSig` (`ed25519:<hex>`) authenticates the commitment and provides
+  non-repudiation; a verifier checks it against `operatorPubKey` over those same bytes.
+
+### 7.4 Example
+
+The test PrecommitInput canonicalizes to
+
+```
+{"beacon":{"round":1,"source":"drand","value":"ff"},"experimentHash":"sha256:ab17b4de…","experimentId":"binary-micropk","experimentVersion":1,"intention":"HIGH","operatorPubKey":"ed25519:abc","prevHash":"sha256:84fd9bac…","serverNonce":"n1","sessionId":"s1"}
+```
+
+giving `precommit = sha256:b227153c…` and `anchor = P8KH-AF4S-EM8E`.
+
+*Reference:* [`commitment.ts`](../packages/core/src/commitment.ts),
+[`identity.ts`](../packages/client/src/identity.ts).
+*Test vectors:* [`test-vectors/precommit.json`](test-vectors/precommit.json) (including an Ed25519
+KAT over the example precommit).
 
 ## 8. Public-beacon binding
 
@@ -436,8 +540,8 @@ cross-language byte-parity (G6) becomes a CI gate.
 |---|---|---|
 | [`canonicalization.json`](test-vectors/canonicalization.json) | §4 | present |
 | [`primitives.json`](test-vectors/primitives.json) | §5 | present |
-| `experiment.json` | §6 | planned |
-| `precommit.json` | §7 | planned |
+| [`experiment.json`](test-vectors/experiment.json) | §6 | present |
+| [`precommit.json`](test-vectors/precommit.json) | §7 | present |
 | `presentiment.json` | §11.2 | planned |
 | `psi-score.json` | §12 | planned |
 | `witness.json` | §13 | planned |

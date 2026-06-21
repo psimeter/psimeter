@@ -1,0 +1,52 @@
+{
+  "_about": "Normative known-answer vectors for section 6 (Experiment definitions). experimentHash = SHA256(PCJ(definition)). A change to any parameter MUST change the hash (content-addressing, D13).",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "6",
+  "requirements": [
+    "PSI-EXP-1",
+    "PSI-EXP-2",
+    "PSI-EXP-3",
+    "PSI-EXP-4"
+  ],
+  "vectors": [
+    {
+      "id": "micropk-v1-example",
+      "definition": {
+        "id": "binary-micropk",
+        "version": 1,
+        "title": "test",
+        "kind": "micro-pk-binary",
+        "params": {
+          "trialBits": 200
+        },
+        "intentions": [
+          "HIGH",
+          "LOW",
+          "BASELINE"
+        ]
+      },
+      "canonical": "{\"id\":\"binary-micropk\",\"intentions\":[\"HIGH\",\"LOW\",\"BASELINE\"],\"kind\":\"micro-pk-binary\",\"params\":{\"trialBits\":200},\"title\":\"test\",\"version\":1}",
+      "experimentHash": "sha256:ab17b4de0bb85f1e8ccc0fd8c1b357cf044087a79e0df358959b37a6fcc96d07"
+    },
+    {
+      "id": "param-change-changes-hash",
+      "definition": {
+        "id": "binary-micropk",
+        "version": 1,
+        "title": "test",
+        "kind": "micro-pk-binary",
+        "params": {
+          "trialBits": 201
+        },
+        "intentions": [
+          "HIGH",
+          "LOW",
+          "BASELINE"
+        ]
+      },
+      "canonical": "{\"id\":\"binary-micropk\",\"intentions\":[\"HIGH\",\"LOW\",\"BASELINE\"],\"kind\":\"micro-pk-binary\",\"params\":{\"trialBits\":201},\"title\":\"test\",\"version\":1}",
+      "experimentHash": "sha256:0a9e21cf7d8c1a89269d084711d53220235c8a1aed2dba95be1414861f1aee23"
+    }
+  ]
+}
