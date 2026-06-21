@@ -44,9 +44,9 @@
 - [Appendix B. Design rationale](#appendix-b-design-rationale)
 
 > **Drafting status.** All sections (1–17) are written; the specification body is complete in draft
-> form. It remains version `0.1.0-draft` pending review. The test vectors (Appendix A) match the
-> reference implementation; wiring them in as the shared CI fixtures of `core` and `analyze.py` is
-> the remaining step. See the [README](README.md) for the versioning and conformance policy.
+> form. It remains version `0.1.0-draft` pending review. The test vectors (Appendix A) are loaded as
+> shared fixtures by both the `core` test suite and `analyze.py --check-vectors`. See the
+> [README](README.md) for the versioning and conformance policy.
 
 ---
 
@@ -842,9 +842,9 @@ agree on the same public ledger.
 
 Normative known-answer vectors live in [`test-vectors/`](test-vectors/) as JSON, so they can be
 loaded by implementations in any language. A conforming implementation (§16) MUST reproduce them.
-They are designed to be loaded as the shared fixtures of both the TypeScript core tests and
-`analysis/analyze.py`; wiring them in (replacing today's inline golden literals) is how
-cross-language byte-parity (G6) becomes a CI gate.
+They are loaded as the shared fixtures of both the TypeScript core test suite and
+`analysis/analyze.py --check-vectors`; both implementations reproducing them is how cross-language
+byte-parity (G6) is enforced in CI.
 
 | File | Covers | Status |
 |---|---|---|

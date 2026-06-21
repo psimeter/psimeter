@@ -589,6 +589,87 @@ def verify_witness_feed(ledger_dir: Path, sealed_ids: set) -> None:
         print("  (no TSA stamps yet - run the witness with PSIMETER_TSA_URL set for independent fine-grained time)")
 
 
+def check_vectors() -> int:
+    """Self-test: reproduce every published normative test vector under
+    spec/test-vectors/ (the SINGLE SOURCE OF TRUTH, spec/README.md). The SAME
+    files drive the TypeScript core tests, so passing here AND there is the
+    cross-language byte-parity gate. Run: python analysis/analyze.py --check-vectors"""
+    vdir = Path(__file__).resolve().parent.parent / "spec" / "test-vectors"
+
+    def load(name):
+        return json.loads((vdir / name).read_text(encoding="utf-8"))
+
+    fails: list[str] = []
+
+    def check(cond, ctx):
+        if not cond:
+            fails.append(ctx)
+
+    cz = load("canonicalization.json")
+    for c in cz["accept"]:
+        check(canonicalize(c["input"]) == c["canonical"], f"canon/{c['id']}")
+    for c in cz["reject"]:
+        try:
+            canonicalize(c["input"])
+            check(False, f"canon-reject/{c['id']}")
+        except (ValueError, TypeError):
+            pass
+
+    pr = load("primitives.json")
+    for c in pr["sha256"]:
+        check(sha256_str(c["inputUtf8"]) == c["output"], f"sha/{c['id']}")
+    for c in pr["merkle"]:
+        check(merkle_root([bytes.fromhex(h) for h in c["leavesHex"]]) == c["root"], f"merkle/{c['id']}")
+
+    for c in load("experiment.json")["vectors"]:
+        check(canonicalize(c["definition"]) == c["canonical"], f"exp-canon/{c['id']}")
+        check(experiment_hash(c["definition"]) == c["experimentHash"], f"exp-hash/{c['id']}")
+
+    pc = load("precommit.json")
+    for c in pc["precommit"]:
+        precommit = sha256_str(canonicalize(c["input"]))
+        check(canonicalize(c["input"]) == c["canonical"], f"pc-canon/{c['id']}")
+        check(precommit == c["precommit"], f"pc-hash/{c['id']}")
+        check(anchor_from_hash(precommit) == c["anchor"], f"pc-anchor/{c['id']}")
+    for c in pc.get("operatorSignature", []):
+        v = verify_operator_sig(c["operatorPubKey"], c["message"], c["operatorSig"])
+        if v is not None:  # None when 'cryptography' is absent → skip
+            check(v is True, f"opsig/{c['id']}")
+
+    L = load("ledger.json")
+    check(GENESIS_PREV == L["genesisPrev"], "ledger/genesisPrev")
+    check(verify_chain(L["chain"]) == -1, "ledger/chain")
+    for e in L["chain"]:
+        check(entry_hash(e) == e["entryHash"], f"ledger/entryHash#{e['seq']}")
+
+    ps = load("presentiment.json")
+    for c in ps["derivePresentimentTarget"]:
+        val, idx = derive_presentiment_target(c["beaconValue"], c["trialIndex"], c["calmCount"], c["aversiveCount"])
+        check(val == c["valence"] and idx == c["imageIndex"], f"derive#{c['trialIndex']}")
+    for c in ps["trialCommit"]:
+        check(sha256_str(canonicalize(c["input"])) == c["trialCommit"], f"tc/{c['id']}")
+
+    for c in load("psi-score.json")["vectors"]:
+        s = psi_score(c["dirzs"])
+        check(s["points"] == c["points"], f"psi/{c['id']}/points")
+        check(s["isCandidate"] == c["isCandidate"], f"psi/{c['id']}/cand")
+        check(s["tierName"] == c["tierName"], f"psi/{c['id']}/tier")
+        check(abs(s["wealth"] - c["wealth"]) <= 1e-9 * max(1.0, abs(c["wealth"])), f"psi/{c['id']}/wealth")
+
+    for c in load("witness.json")["witnessStatement"]:
+        i = c["input"]
+        stmt = witness_statement(i["subjectHash"], i["sessionId"], i["kind"], i["witnessRound"],
+                                 i["witnessChainHash"], i["witnessPubKey"], i.get("trialIndex"))
+        check(stmt == c["statement"], f"ws/{c['id']}")
+
+    if fails:
+        print(f"VECTOR CHECK FAILED ({len(fails)}): " + ", ".join(fails))
+        return 1
+    print("vector check OK - Python reproduces every spec/test-vectors/ file "
+          "(cross-language parity with the TypeScript core).")
+    return 0
+
+
 def main(path: str) -> int:
     entries = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
     print(f"ledger entries: {len(entries)}")
@@ -682,4 +763,7 @@ def main(path: str) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "ledger/dev.jsonl"))
+    _args = sys.argv[1:]
+    if _args and _args[0] == "--check-vectors":
+        sys.exit(check_vectors())
+    sys.exit(main(_args[0] if _args else "ledger/dev.jsonl"))

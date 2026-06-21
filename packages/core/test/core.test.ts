@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   canonicalize,
   sha256,
@@ -11,6 +13,7 @@ import {
   isValidChoice,
   appendEntry,
   verifyChain,
+  GENESIS_PREV,
   sessionZ,
   hitRateZ,
   displayZFromSeal,
@@ -347,4 +350,92 @@ test('witnessQuorum counts DISTINCT trusted keys against the threshold (M of N)'
   assert.equal(witnessQuorum([att(w1)], { trustedKeys: [w1], threshold: 1 }).ok, true);
   // A zero/negative threshold is rejected (no silent "0 witnesses ok").
   assert.equal(witnessQuorum([att(w1)], { trustedKeys: [w1], threshold: 0 }).ok, false);
+});
+
+// ===========================================================================
+// Spec conformance — the published normative test vectors in spec/test-vectors/
+// are the SINGLE SOURCE OF TRUTH (see spec/README.md). The core MUST reproduce
+// every one; analysis/analyze.py loads the SAME files, which is how cross-language
+// byte-parity is enforced in CI. Paths resolve from the compiled dist/test/ dir
+// up to the repo root.
+// ===========================================================================
+const VECTORS = fileURLToPath(new URL('../../../../spec/test-vectors/', import.meta.url));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const vec = (name: string): any => JSON.parse(readFileSync(VECTORS + name, 'utf8'));
+const hexBytes = (h: string): Uint8Array => Uint8Array.from(h.match(/../g)!.map((x) => parseInt(x, 16)));
+
+test('vectors/canonicalization.json', () => {
+  const v = vec('canonicalization.json');
+  for (const c of v.accept) assert.equal(canonicalize(c.input), c.canonical, c.id);
+  for (const c of v.reject) assert.throws(() => canonicalize(c.input), c.id);
+});
+
+test('vectors/primitives.json', () => {
+  const v = vec('primitives.json');
+  for (const c of v.sha256) assert.equal(sha256(c.inputUtf8), c.output, c.id);
+  for (const c of v.merkle) {
+    const acc = new MerkleAccumulator();
+    for (const h of c.leavesHex) acc.add(hexBytes(h));
+    assert.equal(acc.root(), c.root, c.id);
+  }
+});
+
+test('vectors/experiment.json', () => {
+  for (const c of vec('experiment.json').vectors) {
+    assert.equal(canonicalize(c.definition), c.canonical, c.id);
+    assert.equal(experimentHash(c.definition), c.experimentHash, c.id);
+  }
+});
+
+test('vectors/precommit.json', () => {
+  for (const c of vec('precommit.json').precommit) {
+    const r = buildPrecommit(c.input as PrecommitInput);
+    assert.equal(canonicalize(c.input), c.canonical, c.id);
+    assert.equal(r.precommit, c.precommit, c.id);
+    assert.equal(r.anchor, c.anchor, c.id);
+  }
+});
+
+test('vectors/ledger.json', () => {
+  const L = vec('ledger.json');
+  assert.equal(GENESIS_PREV, L.genesisPrev);
+  assert.equal(verifyChain(L.chain as LedgerEntry[]), -1);
+  let prev: LedgerEntry | null = null;
+  for (const e of L.chain as LedgerEntry[]) {
+    assert.equal(appendEntry(prev, e.type, e.payload, e.ts).entryHash, e.entryHash, `entry ${e.seq}`);
+    prev = e;
+  }
+});
+
+test('vectors/presentiment.json', () => {
+  const v = vec('presentiment.json');
+  for (const c of v.derivePresentimentTarget) {
+    const t = derivePresentimentTarget(c.beaconValue, c.trialIndex, c.calmCount, c.aversiveCount);
+    assert.equal(t.valence, c.valence, `valence#${c.trialIndex}`);
+    assert.equal(t.imageIndex, c.imageIndex, `index#${c.trialIndex}`);
+  }
+  for (const c of v.trialCommit) assert.equal(trialCommit(c.input), c.trialCommit, c.id);
+});
+
+test('vectors/psi-score.json', () => {
+  for (const c of vec('psi-score.json').vectors) {
+    const s = psiScore(c.dirzs);
+    assert.equal(s.points, c.points, `${c.id}/points`);
+    assert.equal(s.isCandidate, c.isCandidate, `${c.id}/candidate`);
+    assert.equal(s.tierName, c.tierName, `${c.id}/tier`);
+    assert.ok(Math.abs(s.wealth - c.wealth) <= 1e-9 * Math.max(1, Math.abs(c.wealth)), `${c.id}/wealth`);
+  }
+});
+
+test('vectors/witness.json', () => {
+  const v = vec('witness.json');
+  for (const c of v.witnessStatement) assert.equal(witnessStatement(c.input), c.statement, c.id);
+  for (const c of v.quorum) {
+    const atts: WitnessAttestation[] = c.witnessPubKeys.map((pk: string) => ({
+      witnessPubKey: pk, witnessRound: 1, witnessChainHash: 'cc', witnessSig: 'ed25519:sig',
+    }));
+    const r = witnessQuorum(atts, { trustedKeys: c.trustedKeys, threshold: c.threshold });
+    assert.equal(r.ok, c.ok, `${c.id}/ok`);
+    assert.equal(r.distinctTrusted, c.distinctTrusted, `${c.id}/n`);
+  }
 });

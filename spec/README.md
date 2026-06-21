@@ -17,7 +17,7 @@ that possible.
 |------|--------|----------|
 | [`psimeter-protocol.md`](psimeter-protocol.md) | **Normative** | The protocol: canonicalization, cryptographic primitives, pre-commitment, beacon binding, ledger format, experiment kinds, scoring, the witness protocol, and the verification procedure. |
 | [`RATIONALE.md`](RATIONALE.md) | Informative | *Why* each decision was made — the D1–D16 decision log, the threat model, and the residual-trust accounting. Migrated from the legacy design document. |
-| [`test-vectors/`](test-vectors/) | **Normative** | Machine-readable known-answer vectors. A conforming implementation MUST reproduce them. Designed to be loaded as the shared fixtures of both `packages/core` tests and `analysis/analyze.py` (wiring in progress). |
+| [`test-vectors/`](test-vectors/) | **Normative** | Machine-readable known-answer vectors. A conforming implementation MUST reproduce them. Loaded as the shared fixtures of both the `packages/core` test suite and `analysis/analyze.py --check-vectors`, so CI fails if either drifts. |
 | [`../schema/`](../schema/) | **Normative** | JSON Schemas for ledger entries and experiment definitions. |
 
 ## Conventions
@@ -52,11 +52,9 @@ that possible.
 A prose document cannot generate code — but the dependency is made mechanical:
 
 1. Normative requirements have **stable IDs** cited from code and tests (grep works both ways).
-2. The **test vectors** are the cross-language contract: the reference TypeScript core and the
-   Python verifier are to load them as their shared fixtures, so CI fails if either drifts from
-   the frozen values. This is the byte-parity guard the project treats as sacred. *(The vectors
-   today match the reference implementation; replacing the inline golden literals with these
-   shared files is a rollout step.)*
+2. The **test vectors** are the cross-language contract: the TypeScript core test suite and the
+   Python verifier (`analyze.py --check-vectors`) both load them as fixtures, so CI fails if either
+   drifts from the frozen values. This is the byte-parity guard the project treats as sacred.
 3. The **JSON Schemas** validate real ledger artifacts in CI.
 4. The **wiki** (`packages/client` `/docs`) and the implementation cite section and requirement
    numbers rather than restating the rules.
