@@ -14,7 +14,7 @@ import { el } from '../../ui';
 import type { Disposer } from '../../router';
 import { getOperatorPubKey, signPrecommit } from '../../identity';
 import { witnessBadge } from '../../widgets';
-import { trialCommit, hitRateZ } from '@psymeter/core';
+import { trialCommit, hitRateZ } from '@psimeter/core';
 import {
   createSession,
   submitSignature,
@@ -36,7 +36,7 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
   const inner = el('div', { class: 'runner-inner' });
   outlet.append(el('section', { class: 'runner' }, inner));
 
-  const consentKey = `psymeter.consent.${info.id}`;
+  const consentKey = `psimeter.consent.${info.id}`;
   const revealHoldMs = Number((info.params as Record<string, number>).revealHoldMs ?? 4000);
   let socket: PrecogSocket | null = null;
   let pubKey = '';

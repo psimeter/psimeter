@@ -1,6 +1,6 @@
-# PsyMeter — project context
+# PsiMeter — project context
 
-PsyMeter is an open-source platform for large-scale, anonymous, web-based experiments
+PsiMeter is an open-source platform for large-scale, anonymous, web-based experiments
 testing for putative **"psi"** effects (micro-psychokinesis on a *true* RNG; forced-choice
 precognition). It has **two equally important parts**:
 
@@ -49,17 +49,17 @@ npm test                     # build + unit-test core (node:test, no extra deps)
 npm run build:core           # build core (server imports the built dist)
 cargo build --release --manifest-path packages/entropy-provider/Cargo.toml   # RDSEED sidecar
 npm start                    # server at http://localhost:8787 (auto: RDSEED + drand)
-npm run smoke                # headless transport + signing test (use PSYMETER_FAST=1)
+npm run smoke                # headless transport + signing test (use PSIMETER_FAST=1)
 npm run witness              # independent live-witness node (D16, default :8788)
 npm run smoke:witness        # headless witnessed end-to-end test (spawns witness + server)
 npm run anchor               # anchor ledger head + emit a publishable receipt
 npm run purge                # wipe local dev ledger output (keeps .gitkeep) — purge freely
 python analysis/analyze.py ledger/<file>.jsonl   # independent verify + score
 ```
-Env knobs: `PSYMETER_ENTROPY=os|rdseed` · `PSYMETER_BEACON=drand|dev` · `PSYMETER_LEDGER=<path>` ·
-`PSYMETER_PORT` · `PSYMETER_FAST=1` (skip the 3-min human pacing) · **witnesses (D16):**
-`PSYMETER_WITNESS=url[,url]` · `PSYMETER_WITNESS_THRESHOLD=M` (server) · `PSYMETER_WITNESS_PORT` ·
-`PSYMETER_TSA_URL` · `PSYMETER_WITNESS_FEED` · `PSYMETER_WITNESS_KEY` (witness node).
+Env knobs: `PSIMETER_ENTROPY=os|rdseed` · `PSIMETER_BEACON=drand|dev` · `PSIMETER_LEDGER=<path>` ·
+`PSIMETER_PORT` · `PSIMETER_FAST=1` (skip the 3-min human pacing) · **witnesses (D16):**
+`PSIMETER_WITNESS=url[,url]` · `PSIMETER_WITNESS_THRESHOLD=M` (server) · `PSIMETER_WITNESS_PORT` ·
+`PSIMETER_TSA_URL` · `PSIMETER_WITNESS_FEED` · `PSIMETER_WITNESS_KEY` (witness node).
 
 ## Conventions & gotchas
 - TS strict, NodeNext ESM (`.js` import specifiers). Core is tested with `node --test` on compiled JS

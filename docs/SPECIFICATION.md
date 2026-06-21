@@ -1,4 +1,4 @@
-# PsyMeter — System Specification (Living Document)
+# PsiMeter — System Specification (Living Document)
 
 > **Status:** Draft / active design discussion. Nothing here is final until a line item is explicitly marked **DECIDED**.
 > **Last updated:** 2026-06-20
@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-PsyMeter is an open-source platform for large-scale, anonymous, web-based experiments that test for putative "psi" effects — specifically:
+PsiMeter is an open-source platform for large-scale, anonymous, web-based experiments that test for putative "psi" effects — specifically:
 
 - **Micro-psychokinesis (micro-PK):** whether a human observer can, by intention alone, bias the output of a random process (e.g. the proportion of 1s in a stream of random bits).
 - **Precognition (forced-choice):** whether an observer can anticipate a future random outcome better than chance (e.g. choosing one of two colors before the target is generated).
@@ -208,7 +208,7 @@ Two attacks survived the §7.4 accounting because the experiment server *alone* 
 
 **How it binds in — additive only, no committed-field break.** An attestation is `{witnessPubKey, witnessRound, witnessChainHash, witnessSig, feedSeq, feedEntryHash}` over the canonical `witnessStatement{subjectHash, sessionId, trialIndex?, kind, witnessRound, witnessChainHash, witnessPubKey}` (`packages/core/src/witness.ts`, with a frozen golden vector). Attestations are stored as **new optional fields** on the seal (`witnessed`, `witness.{threshold,keys,open,seal}`, and micro-PK `checkpoints[]`) and on each precognition trial record (`witness[]`); `PrecommitInput`/`buildPrecommit`, `experimentHash`, `trialCommit`, and `derivePresentimentTarget` are **unchanged**, so every previously sealed session still verifies byte-for-byte and an un-witnessed seal is byte-identical to the pre-D16 format. The witness feed is a *sibling* hash-chained log (`witness.attest` entries) verified by the same core machinery; the main ledger cross-references the witness feed head via a `witness.anchor` entry.
 
-**Configuration & honesty.** Witnessing is opt-in via `PSYMETER_WITNESS=url[,url]` + `PSYMETER_WITNESS_THRESHOLD`; unset → sessions seal `witnessed:false` (the old behavior) and are **never pooled** with witnessed confirmatory data. For confirmatory use the trusted witness key-set + threshold should migrate into the **hash-bound experiment definition** (D13), like the psi grid (D15). The reference node is `packages/witness`.
+**Configuration & honesty.** Witnessing is opt-in via `PSIMETER_WITNESS=url[,url]` + `PSIMETER_WITNESS_THRESHOLD`; unset → sessions seal `witnessed:false` (the old behavior) and are **never pooled** with witnessed confirmatory data. For confirmatory use the trusted witness key-set + threshold should migrate into the **hash-bound experiment definition** (D13), like the psi grid (D15). The reference node is `packages/witness`.
 
 ---
 
@@ -331,7 +331,7 @@ Because the backend sits only in the integrity path (which is cryptographically 
 
 ### 8.3 Repository layout (monorepo)
 ```
-psymeter/
+psimeter/
   docs/                 spec, protocol, pre-registration
   schema/               shared JSON Schemas — the cross-language source of truth
   packages/
@@ -440,7 +440,7 @@ Statistical validity depends only on collecting the pre-declared **N independent
 
 ## 10. Public website (Phase 2)
 
-PsyMeter has two equally important faces: the scientific instrument (above) and a **public, gamified website** that strangers worldwide will actually use. Engagement is the data-collection engine (sample size powers H1/H2) — but **the gamification must never alter the protocol or misrepresent what a result means.**
+PsiMeter has two equally important faces: the scientific instrument (above) and a **public, gamified website** that strangers worldwide will actually use. Engagement is the data-collection engine (sample size powers H1/H2) — but **the gamification must never alter the protocol or misrepresent what a result means.**
 
 ### Required sections
 1. **About / how it works.** A friendly, skeptic-accessible explanation of the purpose, the method, and — crucially — *how the cryptographic auditability works* (why you don't have to trust us). A readable on-ramp, not the paper.

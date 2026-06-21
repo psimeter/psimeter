@@ -5,7 +5,7 @@ import {
   derivePresentimentTarget,
   trialCommit,
   type WitnessAttestation,
-} from '@psymeter/core';
+} from '@psimeter/core';
 import type { WebSocket, RawData } from 'ws';
 import type { LedgerStore } from '../ledgerStore.js';
 import type { SessionContext } from '../session.js';

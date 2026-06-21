@@ -77,7 +77,7 @@ export function renderProvenance(): Child[] {
 export function renderCrypto(): Child[] {
   return [
     lead(
-      'Every link in the spine is a public-standard primitive an auditor re-checks independently — you trust the math, not our code. This chapter defines each one and says exactly how PsyMeter uses it.',
+      'Every link in the spine is a public-standard primitive an auditor re-checks independently — you trust the math, not our code. This chapter defines each one and says exactly how PsiMeter uses it.',
     ),
 
     h2('canonicalization', 'Canonical JSON (RFC 8785 / JCS)'),
@@ -112,7 +112,7 @@ export function renderCrypto(): Child[] {
     h2('merkle', 'Domain-separated Merkle tree'),
     p(
       'A ', ext(REF.merkle, 'Merkle tree'),
-      ' reduces an entire stream to a single root hash, computed by hashing pairs of leaves up to the top. PsyMeter folds the raw output into the root ',
+      ' reduces an entire stream to a single root hash, computed by hashing pairs of leaves up to the top. PsiMeter folds the raw output into the root ',
       em('as it streams'),
       ', so the commitment is fixed live. It is ', b('domain-separated'),
       ' — leaves are hashed with a ', code('0x00'), ' prefix and internal nodes with ', code('0x01'),
@@ -146,7 +146,7 @@ export function renderCrypto(): Child[] {
     p(
       'To prove a run is fresh, each session binds a pulse from a public randomness beacon — ',
       ext(REF.drand, 'drand'),
-      ', run by the League of Entropy. PsyMeter uses the ', b('quicknet'),
+      ', run by the League of Entropy. PsiMeter uses the ', b('quicknet'),
       ' chain (unchained, 3-second pulses). Crucially, the server ',
       b('BLS-verifies'),
       ' each pulse’s signature against the hardcoded group public key ',
@@ -159,7 +159,7 @@ export function renderCrypto(): Child[] {
     ),
 
     h2('anchoring', 'External anchoring (OpenTimestamps + RFC 3161 TSA)'),
-    p('The hash chain proves internal consistency; external anchoring proves the corpus existed at a point in real time and can’t be rebuilt later. PsyMeter uses two complementary anchors:'),
+    p('The hash chain proves internal consistency; external anchoring proves the corpus existed at a point in real time and can’t be rebuilt later. PsiMeter uses two complementary anchors:'),
     ul([
       [b('OpenTimestamps → Bitcoin. '), code('npm run anchor'), ' submits the ledger head to ', ext(REF.opentimestamps, 'OpenTimestamps'), ' and writes a standard detached ', code('.ots'), ' proof you can upgrade and verify later — Bitcoin-anchored, no account, no cost.'],
       [b('RFC 3161 Time-Stamp Authority. '), 'An independent ', ext(REF.rfc3161, 'TSA'), ' co-signs feed heads (used heavily by ', link(P.witnesses, 'witnesses'), '), giving an un-forgeable timestamp at TSA granularity even when only the owner runs a node.'],
@@ -175,7 +175,7 @@ export function renderCrypto(): Child[] {
 export function renderEntropy(): Child[] {
   return [
     lead(
-      'Only a genuinely physical, nondeterministic process could, even in principle, be nudged moment-to-moment by intention. A seeded PRNG is deterministic after seeding — there is nothing to influence — so it is excluded from the confirmatory micro-PK arm. PsyMeter climbs a ladder of real sources and records exactly which one produced every session.',
+      'Only a genuinely physical, nondeterministic process could, even in principle, be nudged moment-to-moment by intention. A seeded PRNG is deterministic after seeding — there is nothing to influence — so it is excluded from the confirmatory micro-PK arm. PsiMeter climbs a ladder of real sources and records exactly which one produced every session.',
     ),
 
     h2('ladder', 'The entropy ladder'),
@@ -212,7 +212,7 @@ export function renderEntropy(): Child[] {
     h2('raw', 'Raw, unconditioned bits (decision D10)'),
     p(
       'Hardware sources are normally ', em('whitened'),
-      ' (von Neumann / hashing) to remove bias — but conditioning could also wash out the tiny intention signal we are hunting. So PsyMeter captures ',
+      ' (von Neumann / hashing) to remove bias — but conditioning could also wash out the tiny intention signal we are hunting. So PsiMeter captures ',
       b('raw, unconditioned'),
       ' samples, documents the exact sampling, calibrates the static bias relentlessly, and relies on the ',
       link(P.hypotheses, 'HIGH−LOW differential'),
@@ -222,7 +222,7 @@ export function renderEntropy(): Child[] {
     h2('test-suites', 'Continuous randomness testing'),
     p(
       'A compromised or biased source shows up first in the ', link(P.results, 'baseline'),
-      '. PsyMeter runs standard statistical test suites on operator-absent output:',
+      '. PsiMeter runs standard statistical test suites on operator-absent output:',
     ),
     ul([
       [ext(REF.sp80022, 'NIST SP 800-22'), ' — the Statistical Test Suite (STS) for RNGs.'],

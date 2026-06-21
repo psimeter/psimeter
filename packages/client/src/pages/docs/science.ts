@@ -8,7 +8,7 @@ import { h2, p, lead, b, em, code, pre, ul, ol, link, ext, callout, warn, defs }
 export function renderHypotheses(): Child[] {
   return [
     lead(
-      'PsyMeter tests two distinct, pre-registered hypotheses. They are deliberately separated because they demand different analyses and different safeguards. Neither claims that “anomalies occur” — anomalies are guaranteed by chance. They ask something far harder to fake.',
+      'PsiMeter tests two distinct, pre-registered hypotheses. They are deliberately separated because they demand different analyses and different safeguards. Neither claims that “anomalies occur” — anomalies are guaranteed by chance. They ask something far harder to fake.',
     ),
 
     h2('h1', 'H1 — individual consistency'),
@@ -51,7 +51,7 @@ export function renderHypotheses(): Child[] {
 export function renderExperiments(): Child[] {
   return [
     lead(
-      'PsyMeter isn’t one test — it’s a growing set of experiments behind a single shared trust spine. Only the choice vocabulary, the generation/reveal protocol, and the scoring differ per kind. Two experiments ship today.',
+      'PsiMeter isn’t one test — it’s a growing set of experiments behind a single shared trust spine. Only the choice vocabulary, the generation/reveal protocol, and the scoring differ per kind. Two experiments ship today.',
     ),
 
     h2('micropk', 'Binary micro-PK'),
@@ -150,7 +150,7 @@ export function renderResults(): Child[] {
 
     h2('multiple-comparisons', 'Multiple comparisons & the firehose'),
     p(
-      'If you test enough people, some will look special by luck alone — the multiple-comparisons problem. PsyMeter does not pretend this away; it ',
+      'If you test enough people, some will look special by luck alone — the multiple-comparisons problem. PsiMeter does not pretend this away; it ',
       b('builds around it'),
       ': the open firehose is explicitly exploratory, the leaderboard shows the ',
       em('expected-by-chance'),

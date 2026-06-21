@@ -1,8 +1,8 @@
 {
-  "name": "@psymeter/client",
+  "name": "@psimeter/client",
   "version": "0.0.0",
   "private": true,
-  "description": "PsyMeter public website (Phase 2): gamified experiment UI + how-it-works, Vite + TS, no CDN imports.",
+  "description": "PsiMeter public website (Phase 2): gamified experiment UI + how-it-works, Vite + TS, no CDN imports.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@noble/ed25519": "^2.1.0",
-    "@psymeter/core": "*",
+    "@psimeter/core": "*",
     "three": "^0.161.0"
   },
   "devDependencies": {

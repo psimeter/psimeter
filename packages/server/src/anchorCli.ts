@@ -2,7 +2,7 @@
  * `npm run anchor` — append an external-anchor entry for the current ledger head,
  * emit a publishable receipt, and (by default) submit the head hash to
  * OpenTimestamps, writing a detached `.ots` proof to upgrade/verify later with the
- * standard OpenTimestamps tools (spec D2, §7.6). Set PSYMETER_OTS=0 to skip the
+ * standard OpenTimestamps tools (spec D2, §7.6). Set PSIMETER_OTS=0 to skip the
  * network submission and just emit the receipt.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ import { anchorHead } from './anchor.js';
 import { buildOtsProof, sha256Bytes, stampHashViaOpenTimestamps } from './opentimestamps.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const ledgerPath = resolve(repoRoot, process.env.PSYMETER_LEDGER ?? 'ledger/dev.jsonl');
+const ledgerPath = resolve(repoRoot, process.env.PSIMETER_LEDGER ?? 'ledger/dev.jsonl');
 const receiptsPath = resolve(dirname(ledgerPath), 'anchor-receipts.jsonl');
 
 const store = new LedgerStore(ledgerPath);
@@ -23,8 +23,8 @@ const r = anchorHead(store, receiptsPath);
 console.log(`anchored ledger head:\n  ${r.headHash}\n  at ${r.anchoredAt}`);
 console.log(`receipt appended to ${receiptsPath}`);
 
-if (process.env.PSYMETER_OTS === '0') {
-  console.log('\nOpenTimestamps submission skipped (PSYMETER_OTS=0). Publish the head hash manually (D2).');
+if (process.env.PSIMETER_OTS === '0') {
+  console.log('\nOpenTimestamps submission skipped (PSIMETER_OTS=0). Publish the head hash manually (D2).');
 } else {
   try {
     // Stamp a small file whose content IS the head hash, so the proof pairs with a

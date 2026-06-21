@@ -1,4 +1,4 @@
-# @psymeter/client
+# @psimeter/client
 
 The operator UI: anchor, countdown timer, and the live three.js visualization with
 a real-time anomaly cue (spec §4).

@@ -9,7 +9,7 @@ import { h2, p, lead, b, em, ul, link, ext, callout, warn, defs } from './prose'
 export function renderStart(): Child[] {
   return [
     lead(
-      'PsyMeter is an open-source platform for large-scale, anonymous, web-based experiments that test for putative ',
+      'PsiMeter is an open-source platform for large-scale, anonymous, web-based experiments that test for putative ',
       em('“psi”'),
       ' effects — whether a person can, by intention alone, bias a genuinely physical random process (micro-psychokinesis), or anticipate a random outcome before it exists (forced-choice precognition).',
     ),
@@ -20,7 +20,7 @@ export function renderStart(): Child[] {
     ),
 
     h2('two-faces', 'Two equally important faces'),
-    p('PsyMeter is deliberately two things at once, and neither is allowed to compromise the other:'),
+    p('PsiMeter is deliberately two things at once, and neither is allowed to compromise the other:'),
     ul([
       [b('A scientific instrument. '), 'Rigorous, fraud-resistant, auditable methodology — fixed-N runs, pre-registration, a calibrated baseline, and a cryptographic provenance spine so results survive adversarial scrutiny from a skeptical scientist or journal reviewer.'],
       [b('A public, gamified website. '), 'Engaging enough that strangers worldwide actually play, because sample size is the data-collection engine. The gamification ', b('never'), ' alters the protocol or misrepresents what a result means.'],
@@ -61,7 +61,7 @@ export function renderStart(): Child[] {
 export function renderPrinciple(): Child[] {
   return [
     lead(
-      'Claims of mind-over-randomness have a long history of not surviving scrutiny — usually because the result rested on trusting the people who collected it. PsyMeter’s answer is to remove trust from the equation entirely.',
+      'Claims of mind-over-randomness have a long history of not surviving scrutiny — usually because the result rested on trusting the people who collected it. PsiMeter’s answer is to remove trust from the equation entirely.',
     ),
 
     h2('untrusted', 'The experimenter is untrusted'),
@@ -123,7 +123,7 @@ export function renderGlossary(): Child[] {
       [term('commitment', 'Commitment (pre-commitment)'), ['A hash published ', b('before'), ' generation that binds the prediction + parameters without revealing data. ', link(P.crypto, 'How it works'), '.']],
       [term('anchor', 'Anchor'), ['A short, human-readable value shown to the operator, cryptographically derived from the pre-commitment — the public “fingerprint” of the run, and (in ESP framing) the mental focal point.']],
       [term('reveal', 'Reveal'), ['Post-run publication of the values that let anyone verify the commitment.']],
-      [term('beacon', 'Beacon'), ['An external public-randomness source (PsyMeter uses ', ext(REF.drand, 'drand'), ') whose value did not exist before the run started — proof of freshness.']],
+      [term('beacon', 'Beacon'), ['An external public-randomness source (PsiMeter uses ', ext(REF.drand, 'drand'), ') whose value did not exist before the run started — proof of freshness.']],
       [term('baseline', 'Baseline / Calibration'), ['Operator-absent runs through the identical pipeline, used to characterize the generator’s ', em('true'), ' behaviour. See ', link(P.results, 'the calibrated null'), '.']],
       [term('merkle', 'Merkle root / commitment'), ['A single hash that pins an entire stream of data, computed as a ', ext(REF.merkle, 'Merkle tree'), '. Folded live so raw output can’t be altered after the fact.']],
       [term('ledger', 'Ledger'), ['The append-only, hash-chained log of all sessions; tamper-evident and externally anchored. ', link(P.crypto, 'Details'), '.']],

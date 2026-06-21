@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { canonicalize, choiceVocabulary, isValidChoice, type Choice, type EntropySource } from '@psymeter/core';
+import { canonicalize, choiceVocabulary, isValidChoice, type Choice, type EntropySource } from '@psimeter/core';
 import { LedgerStore } from './ledgerStore.js';
 import { loadExperiment, listExperiments } from './experiments.js';
 import {
@@ -30,9 +30,9 @@ const repoRoot = resolve(here, '../../..');
 // for hot-reload development use `npm run dev:client` (Vite serves on :5173 and
 // proxies /api back to this server).
 const clientDir = resolve(repoRoot, 'packages/client/dist');
-// Relative PSYMETER_LEDGER values resolve against the repo root; absolute paths
+// Relative PSIMETER_LEDGER values resolve against the repo root; absolute paths
 // are honored as-is. Lets each experiment campaign keep its own ledger file.
-const ledgerPath = resolve(repoRoot, process.env.PSYMETER_LEDGER ?? 'ledger/dev.jsonl');
+const ledgerPath = resolve(repoRoot, process.env.PSIMETER_LEDGER ?? 'ledger/dev.jsonl');
 const blobDir = resolve(dirname(ledgerPath), 'blobs');
 // PRIVATE, off-ledger store for opt-in psi-candidate contacts (D15). Holds PII,
 // so it lives beside the ledger (git-ignored) and is NEVER served over /api.
@@ -41,7 +41,7 @@ const contactsPath = resolve(dirname(ledgerPath), 'contacts.jsonl');
 const stimuliDir = resolve(repoRoot, 'stimuli');
 
 /** Pacing is FAST (no inter-checkpoint delay) for tests; off in normal use. */
-const FAST = process.env.PSYMETER_FAST === '1';
+const FAST = process.env.PSIMETER_FAST === '1';
 
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -63,9 +63,9 @@ const CONTENT_TYPES: Record<string, string> = {
 
 /** Shown when the server runs but the client has not been built yet. */
 const NOT_BUILT_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>PsyMeter — build the client</title></head>
+<title>PsiMeter — build the client</title></head>
 <body style="font-family:system-ui;background:#07090d;color:#e8edf4;max-width:640px;margin:48px auto;padding:0 20px;line-height:1.6">
-<h1 style="font-weight:650">PsyMeter server is running</h1>
+<h1 style="font-weight:650">PsiMeter server is running</h1>
 <p>The public site hasn't been built yet. From the repo root:</p>
 <pre style="background:#10151d;border:1px solid #1d2632;padding:14px;border-radius:8px;overflow:auto">npm run build:client   <span style="color:#5e6b7c"># production build, served from here</span>
 <span style="color:#5e6b7c"># or, for live development with hot reload:</span>
@@ -77,7 +77,7 @@ const SIGN_ROUTE = /^\/api\/sessions\/([^/]+)\/sign$/;
 const SESSION_DETAIL_ROUTE = /^\/api\/sessions\/([^/]+)$/;
 
 /**
- * Build the PsyMeter HTTP + one-way WebSocket server (spec §8).
+ * Build the PsiMeter HTTP + one-way WebSocket server (spec §8).
  *
  * Handshake (spec §7.2):
  *   1. `POST /api/sessions` declares experiment + intention + operator key and
@@ -112,7 +112,7 @@ export function createApp(): http.Server {
   console.log(
     witness.enabled
       ? `[witness] live witnessing ON: ${witness.urls.length} witness(es), threshold ${witness.threshold} (spec D16)`
-      : '[witness] live witnessing OFF (set PSYMETER_WITNESS=url[,url] to enable; sessions sealed as witnessed:false)',
+      : '[witness] live witnessing OFF (set PSIMETER_WITNESS=url[,url] to enable; sessions sealed as witnessed:false)',
   );
 
   const server = http.createServer((req, res) => {

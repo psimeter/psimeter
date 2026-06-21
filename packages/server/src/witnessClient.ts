@@ -1,4 +1,4 @@
-import type { WitnessAttestation, WitnessSubjectKind } from '@psymeter/core';
+import type { WitnessAttestation, WitnessSubjectKind } from '@psimeter/core';
 
 /**
  * Client to the independent live witness(es) (spec §7.4, D16).
@@ -10,8 +10,8 @@ import type { WitnessAttestation, WitnessSubjectKind } from '@psymeter/core';
  * counts an M-of-N quorum of *trusted* keys (a published list) in analyze.py and
  * /verify.
  *
- * Configure with `PSYMETER_WITNESS=url1[,url2,...]` and optional
- * `PSYMETER_WITNESS_THRESHOLD=M`. Unset → witnessing is OFF and sessions are
+ * Configure with `PSIMETER_WITNESS=url1[,url2,...]` and optional
+ * `PSIMETER_WITNESS_THRESHOLD=M`. Unset → witnessing is OFF and sessions are
  * sealed exactly as before (`witnessed:false`), so existing flows are unchanged.
  */
 export interface AttestSubject {
@@ -88,11 +88,11 @@ function trimSlash(u: string): string {
 
 /** Build the witness client from the environment (off when unset). */
 export function selectWitnessClient(): WitnessClient {
-  const urls = (process.env.PSYMETER_WITNESS ?? '')
+  const urls = (process.env.PSIMETER_WITNESS ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  const requested = Number(process.env.PSYMETER_WITNESS_THRESHOLD ?? urls.length);
+  const requested = Number(process.env.PSIMETER_WITNESS_THRESHOLD ?? urls.length);
   // Default threshold = number of configured witnesses; clamp to [1, urls.length].
   const threshold = urls.length ? Math.min(Math.max(1, requested), urls.length) : 0;
   return new WitnessClient(urls, threshold);

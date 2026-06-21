@@ -7,7 +7,7 @@ code. Small on purpose — the entropy path should be auditable in one sitting.
 Currently implements the `rdseed` source: the CPU's on-die thermal-noise entropy
 source via the `RDSEED` instruction (a genuine physical, nondeterministic source —
 *not* `rdrand`, which is a CSPRNG). It is whitened on-die and vendor-opaque, so
-PsyMeter treats it as **pilot-grade / non-confirmatory** (spec D1). No conditioning
+PsiMeter treats it as **pilot-grade / non-confirmatory** (spec D1). No conditioning
 is applied here (D10).
 
 ```bash

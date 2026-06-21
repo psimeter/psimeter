@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import type { EntropySource, EntropyMetadata, EntropyKind } from '@psymeter/core';
+import type { EntropySource, EntropyMetadata, EntropyKind } from '@psimeter/core';
 
 /**
  * Entropy source backed by the Rust `entropy-provider` sidecar (e.g. RDSEED).

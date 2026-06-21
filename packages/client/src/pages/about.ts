@@ -85,7 +85,7 @@ export function renderAbout(outlet: HTMLElement): void {
         el('span', { class: 'eyebrow' }, 'How it works'),
         el('h1', {}, 'You don’t have to trust us'),
         el('p', { class: 'lede' },
-          'PsyMeter tests a question researchers have argued about for decades: can a person, by intention alone, shift the output of a genuinely random process — or anticipate one? Claims like this have a long history of not surviving scrutiny. So the platform is built around one principle:'),
+          'PsiMeter tests a question researchers have argued about for decades: can a person, by intention alone, shift the output of a genuinely random process — or anticipate one? Claims like this have a long history of not surviving scrutiny. So the platform is built around one principle:'),
         el('p', { class: 'rule' },
           'The experimenter is treated as an untrusted party, and every result is verifiable from public data by a skeptic who trusts no one.'),
         el('div', { class: 'audience-hint' }, [
@@ -108,7 +108,7 @@ export function renderAbout(outlet: HTMLElement): void {
       // ---- the family of experiments ------------------------------------
       el('h2', { class: 'about-h2' }, 'One platform, many experiments'),
       el('p', { class: 'section-lede' },
-        'PsyMeter isn\'t a single test — it\'s a growing set of experiments, each probing the same question from a different direction. They fall into two families:'),
+        'PsiMeter isn\'t a single test — it\'s a growing set of experiments, each probing the same question from a different direction. They fall into two families:'),
       el('div', { class: 'twocol' }, [
         el('div', { class: 'card' }, [
           el('h3', {}, 'Influence — micro-psychokinesis'),
@@ -197,7 +197,7 @@ export function renderAbout(outlet: HTMLElement): void {
         'When you first open the site, your browser generates a random keypair and keeps it locally. It carries no name, email, or personal data — it simply lets you accumulate sessions and return, and it signs each run as yours. Clear your browser storage and that pseudonym is gone forever.'),
 
       el('div', { class: 'callout closing' }, [
-        'PsyMeter is open source — protocol, code, pre-registration, and (eventually) the full raw dataset. The point is not to be believed. The point is to be ',
+        'PsiMeter is open source — protocol, code, pre-registration, and (eventually) the full raw dataset. The point is not to be believed. The point is to be ',
         el('strong', {}, 'checked'),
         '. Ready to try it? ',
         el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run an experiment →'),

@@ -18,7 +18,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const UA = 'Mozilla/5.0 PsyMeter/0.1 (open-source psi research)';
+const UA = 'Mozilla/5.0 PsiMeter/0.1 (open-source psi research)';
 const PER_CATEGORY = 10;
 
 const PLAN = {

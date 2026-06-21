@@ -2,7 +2,7 @@
 name = "entropy-provider"
 version = "0.0.0"
 edition = "2018"
-description = "PsyMeter raw-entropy sidecar. Emits RAW, unconditioned bytes from a hardware source (RDSEED)."
+description = "PsiMeter raw-entropy sidecar. Emits RAW, unconditioned bytes from a hardware source (RDSEED)."
 license = "MIT"
 
 # Intentionally ZERO dependencies: the entropy path must be trivially auditable

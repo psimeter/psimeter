@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
  * ledger head into Bitcoin's timestamp, with no account and no cost.
  *
  * This is operational tooling, NOT part of the auditor's trust path: the proof it
- * writes is verified by standard OTS software, not by any PsyMeter code. So a
+ * writes is verified by standard OTS software, not by any PsiMeter code. So a
  * tiny, dependency-free client is appropriate. Detached-proof layout (mirrors
  * python-opentimestamps): MAGIC ‖ version ‖ sha256-op ‖ <32-byte msg> ‖ <calendar
  * timestamp>, where the calendar's /digest response IS the serialized timestamp.
@@ -47,7 +47,7 @@ export async function stampHashViaOpenTimestamps(digest: Uint8Array): Promise<Ui
         headers: {
           'Content-Type': 'application/octet-stream',
           Accept: 'application/octet-stream',
-          'User-Agent': 'psymeter-anchor',
+          'User-Agent': 'psimeter-anchor',
         },
         body: digest,
         signal: AbortSignal.timeout(15000),

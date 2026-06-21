@@ -1,4 +1,4 @@
-"""PsyMeter analysis pipeline (Phase 1).
+"""PsiMeter analysis pipeline (Phase 1).
 
 Authoritative statistics are computed HERE, in Python, over the *published*
 ledger - never trusting the live server (spec §8.1). This script:
@@ -275,11 +275,11 @@ def verify_operator_sig(pubkey: str, precommit: str, sig: str):
 # ---- live-witness verification (mirror of packages/core/src/witness.ts, spec D16) ----
 
 # Trusted witness keys are the AUDITOR's input, NOT the server's: set
-# PSYMETER_TRUSTED_WITNESSES to a comma-separated list of ed25519:<hex> keys you
+# PSIMETER_TRUSTED_WITNESSES to a comma-separated list of ed25519:<hex> keys you
 # independently know to be honest witnesses (published in the repo, like the drand
 # group key). When set, only these keys count toward a quorum; when unset, every
 # valid signature counts and the keys are printed so you can eyeball them.
-TRUSTED_WITNESSES = {k.strip() for k in os.environ.get("PSYMETER_TRUSTED_WITNESSES", "").split(",") if k.strip()}
+TRUSTED_WITNESSES = {k.strip() for k in os.environ.get("PSIMETER_TRUSTED_WITNESSES", "").split(",") if k.strip()}
 
 
 def witness_statement(subject_hash, session_id, kind, witness_round, witness_chain_hash, witness_pubkey, trial_index=None):
@@ -544,9 +544,9 @@ def verify_witness_feed(ledger_dir: Path, sealed_ids: set) -> None:
     feed is the witness's own append-only log — kept separately so the untrusted
     server cannot silently drop an attestation. Re-verify its hash-chain and every
     co-signature, and flag any session witnessed-open but never sealed (the
-    started-but-unsealed pattern). Point at it with PSYMETER_WITNESS_FEED, else we
+    started-but-unsealed pattern). Point at it with PSIMETER_WITNESS_FEED, else we
     look for ledger/witness-feed.jsonl beside the main ledger."""
-    feed_path = Path(os.environ.get("PSYMETER_WITNESS_FEED", str(ledger_dir / "witness-feed.jsonl")))
+    feed_path = Path(os.environ.get("PSIMETER_WITNESS_FEED", str(ledger_dir / "witness-feed.jsonl")))
     if not feed_path.exists():
         return
     entries = [json.loads(l) for l in feed_path.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -586,7 +586,7 @@ def verify_witness_feed(ledger_dir: Path, sealed_ids: set) -> None:
             tp = ledger_dir / st["tsr"]
             print(f"    feedSeq {st['feedSeq']}  {st['tsr']}  genTime={tsr_gentime(tp) or 'unparsed'}")
     else:
-        print("  (no TSA stamps yet - run the witness with PSYMETER_TSA_URL set for independent fine-grained time)")
+        print("  (no TSA stamps yet - run the witness with PSIMETER_TSA_URL set for independent fine-grained time)")
 
 
 def main(path: str) -> int:

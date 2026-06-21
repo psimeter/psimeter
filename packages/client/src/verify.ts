@@ -4,7 +4,7 @@
 // experiment definition), this recomputes the pre-commitment and anchor from
 // first principles, checks the hash-chain entry hashes, and verifies the
 // operator's Ed25519 signature — all in the browser, using the SAME pure
-// @psymeter/core that the server and analysis/analyze.py use. Nothing here trusts
+// @psimeter/core that the server and analysis/analyze.py use. Nothing here trusts
 // the server's word for anything; every value is recomputed locally.
 //
 // (The raw-bit Merkle root is verified against the multi-megabyte raw blob in
@@ -21,7 +21,7 @@ import {
   trialCommit,
   choiceVocabulary,
   witnessStatement,
-} from '@psymeter/core';
+} from '@psimeter/core';
 import * as ed from '@noble/ed25519';
 import type { OpenPayload, SealPayload, SessionDetail, WitnessAttestation } from './api';
 

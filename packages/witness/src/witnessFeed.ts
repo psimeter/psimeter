@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { appendEntry, type LedgerEntry } from '@psymeter/core';
+import { appendEntry, type LedgerEntry } from '@psimeter/core';
 import { requestTimestamp } from './tsa.js';
 
 /**
@@ -33,7 +33,7 @@ export class WitnessFeed {
     }
     this.tsrDir = resolve(dirname(path), 'witness-tsr');
     this.stampsPath = resolve(dirname(path), 'witness-feed.stamps.jsonl');
-    if (!this.head) this.appendEntry('genesis', { note: 'psymeter witness feed' });
+    if (!this.head) this.appendEntry('genesis', { note: 'psimeter witness feed' });
   }
 
   get currentHead(): LedgerEntry | null {

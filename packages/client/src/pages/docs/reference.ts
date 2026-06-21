@@ -102,7 +102,7 @@ const REF_GROUPS: RefGroup[] = [
     { cite: [b('Bösch, Steinkamp & Boller (2006)'), ', Psychological Bulletin 132(4):497–523.'], href: REF.bosch2006, note: 'Meta-analysis of RNG studies finding a very small but significant effect, which the authors concluded was best explained by publication bias rather than psi.' },
     { cite: [b('Bem (2011)'), ', “Feeling the Future,” JPSP.'], href: REF.bem2011, note: 'Nine precognition experiments reporting positive results; a flashpoint of psychology’s replication crisis.' },
     { cite: [b('Galak, LeBoeuf, Nelson & Simmons (2012)'), ', JPSP.'], href: REF.galak2012, note: 'Seven experiments (N = 3,289) that failed to replicate Bem (2011); average effect size d = 0.04, indistinguishable from zero.' },
-    { cite: [b('Mossbridge, Tressoldi & Utts (2012)'), ', Frontiers in Psychology.'], href: REF.mossbridge2012, note: 'Meta-analysis of predictive physiological anticipation (presentiment) — the paradigm behind PsyMeter’s precognition experiment.' },
+    { cite: [b('Mossbridge, Tressoldi & Utts (2012)'), ', Frontiers in Psychology.'], href: REF.mossbridge2012, note: 'Meta-analysis of predictive physiological anticipation (presentiment) — the paradigm behind PsiMeter’s precognition experiment.' },
     { cite: [b('Global Consciousness Project'), '.'], href: REF.gcp, note: 'A worldwide network of RNGs reporting correlations with major events — intriguing to some, unconvincing to most statisticians.' },
     { cite: [b('Rhine Research Center'), '.'], href: REF.rhine, note: 'Heir to J.B. Rhine’s Duke lab — the origins of forced-choice ESP testing.' },
   ] },

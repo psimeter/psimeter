@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import type { ExperimentDefinition } from '@psymeter/core';
+import type { ExperimentDefinition } from '@psimeter/core';
 
 const here = dirname(fileURLToPath(import.meta.url));
 /** Repo-root `experiments/` directory (packages/server/src → ../../../experiments). */

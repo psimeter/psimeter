@@ -1,6 +1,6 @@
 // In-browser verification view (spec §7.3) — the showcase for "don't trust us".
 // Fetches a session's revealed fields and recomputes/verifies them locally with
-// @psymeter/core + @noble/ed25519, reporting each check.
+// @psimeter/core + @noble/ed25519, reporting each check.
 
 import { el } from '../ui';
 import type { Disposer } from '../router';
@@ -55,7 +55,7 @@ function render(detail: SessionDetail, checks: Check[]): HTMLElement[] {
     el('div', {}, [
       el('div', { class: 'verdict-title' }, allOk ? 'Verified in your browser' : 'Verification failed'),
       el('div', { class: 'dim', style: 'font-size:13px' }, allOk
-        ? 'Every check below was recomputed locally with @psymeter/core — the server was not trusted for any of it.'
+        ? 'Every check below was recomputed locally with @psimeter/core — the server was not trusted for any of it.'
         : 'One or more checks did not match; this record may be inconsistent.'),
       s?.witnessed ? el('div', { style: 'margin-top:8px' }, witnessBadge()) : false,
     ]),

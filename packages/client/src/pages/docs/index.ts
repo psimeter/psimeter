@@ -32,7 +32,7 @@ export const DOC_GROUPS = [
 
 /** All chapters, in reading (and prev/next) order. */
 export const DOC_CHAPTERS: DocChapter[] = [
-  { id: 'start', path: P.start, group: 'Orientation', title: 'Start here', blurb: 'What PsyMeter is and how to read these docs.', render: renderStart },
+  { id: 'start', path: P.start, group: 'Orientation', title: 'Start here', blurb: 'What PsiMeter is and how to read these docs.', render: renderStart },
   { id: 'principle', path: P.principle, group: 'Orientation', title: 'Why you don’t have to trust us', blurb: 'The untrusted-experimenter principle and the seven design pillars.', render: renderPrinciple },
   { id: 'glossary', path: P.glossary, group: 'Orientation', title: 'Glossary', blurb: 'Every term, defined.', render: renderGlossary },
 

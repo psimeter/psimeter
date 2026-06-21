@@ -11,7 +11,7 @@
  *  - Object keys sorted by UTF-16 code unit (matches ECMAScript string order).
  *  - Only finite SAFE INTEGERS are permitted as numbers. Floats are REJECTED:
  *    their shortest round-trip form is a portability hazard. Every committed
- *    quantity in PsyMeter is an integer or string; derived statistics (z-scores)
+ *    quantity in PsiMeter is an integer or string; derived statistics (z-scores)
  *    are display-only and never appear in a committed payload (spec §8.1, §8.5).
  *  - undefined / NaN / Infinity / bigint / functions are rejected.
  */

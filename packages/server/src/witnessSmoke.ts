@@ -10,7 +10,7 @@
  *   4. prints the ledger + witness-feed paths so analyze.py can re-verify
  *      signatures, the choice-before-target timing, and the checkpoint prefixes.
  *
- *   PSYMETER_FAST=1 npx tsx src/witnessSmoke.ts
+ *   PSIMETER_FAST=1 npx tsx src/witnessSmoke.ts
  */
 import { generateKeyPairSync, sign as edSign } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -18,8 +18,8 @@ import { rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
-import { trialCommit } from '@psymeter/core';
-// NOTE: app.js reads PSYMETER_LEDGER / PSYMETER_FAST in module-level consts at
+import { trialCommit } from '@psimeter/core';
+// NOTE: app.js reads PSIMETER_LEDGER / PSIMETER_FAST in module-level consts at
 // import time, so it is imported DYNAMICALLY in main() AFTER we set the env.
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -129,18 +129,18 @@ async function main(): Promise<void> {
   rmSync(tmp, { recursive: true, force: true });
   // Set the server env BEFORE app.js is (dynamically) imported — its ledger path
   // and FAST flag are read in module-level consts at import time.
-  process.env.PSYMETER_BEACON = 'dev';
-  process.env.PSYMETER_FAST = '1';
-  process.env.PSYMETER_ENTROPY = 'os';
-  process.env.PSYMETER_LEDGER = ledgerPath;
-  process.env.PSYMETER_WITNESS = witnessUrl;
-  process.env.PSYMETER_WITNESS_THRESHOLD = '1';
+  process.env.PSIMETER_BEACON = 'dev';
+  process.env.PSIMETER_FAST = '1';
+  process.env.PSIMETER_ENTROPY = 'os';
+  process.env.PSIMETER_LEDGER = ledgerPath;
+  process.env.PSIMETER_WITNESS = witnessUrl;
+  process.env.PSIMETER_WITNESS_THRESHOLD = '1';
 
   const childEnv = {
     ...process.env,
-    PSYMETER_BEACON: 'dev', PSYMETER_FAST: '1', PSYMETER_ENTROPY: 'os',
-    PSYMETER_WITNESS_PORT: String(witnessPort), PSYMETER_WITNESS_FEED: feedPath,
-    PSYMETER_WITNESS_KEY: keyPath, PSYMETER_WITNESS_TSA_INTERVAL_MS: '0',
+    PSIMETER_BEACON: 'dev', PSIMETER_FAST: '1', PSIMETER_ENTROPY: 'os',
+    PSIMETER_WITNESS_PORT: String(witnessPort), PSIMETER_WITNESS_FEED: feedPath,
+    PSIMETER_WITNESS_KEY: keyPath, PSIMETER_WITNESS_TSA_INTERVAL_MS: '0',
   };
   // eslint-disable-next-line no-console
   console.log('[smoke] spawning witness node…');

@@ -1,8 +1,8 @@
 {
-  "name": "@psymeter/server",
+  "name": "@psimeter/server",
   "version": "0.0.0",
   "private": true,
-  "description": "PsyMeter server: HTTP + one-way WebSocket, session orchestration, generation loop.",
+  "description": "PsiMeter server: HTTP + one-way WebSocket, session orchestration, generation loop.",
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@noble/curves": "^1.6.0",
-    "@psymeter/core": "*",
+    "@psimeter/core": "*",
     "ws": "^8.16.0"
   },
   "devDependencies": {

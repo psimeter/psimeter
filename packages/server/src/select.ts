@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { EntropySource } from '@psymeter/core';
+import type { EntropySource } from '@psimeter/core';
 import { OsEntropySource } from './entropy/os.js';
 import { SidecarEntropySource } from './entropy/sidecar.js';
 
@@ -18,10 +18,10 @@ function sidecarBinPath(): string {
  *
  * Default: prefer the RDSEED sidecar when it is built and reports `available`,
  * so the owner self-tests on real physical entropy (pilot-grade, D1). Falls back
- * to the NON-CONFIRMATORY OS source. Override with `PSYMETER_ENTROPY=os|rdseed`.
+ * to the NON-CONFIRMATORY OS source. Override with `PSIMETER_ENTROPY=os|rdseed`.
  */
 export function selectEntropySource(): EntropySource {
-  const pref = process.env.PSYMETER_ENTROPY;
+  const pref = process.env.PSIMETER_ENTROPY;
   if (pref === 'os') return new OsEntropySource();
 
   const bin = sidecarBinPath();
@@ -35,7 +35,7 @@ export function selectEntropySource(): EntropySource {
   }
 
   if (pref === 'rdseed') {
-    throw new Error('PSYMETER_ENTROPY=rdseed but the entropy-provider sidecar is unavailable; build it with cargo.');
+    throw new Error('PSIMETER_ENTROPY=rdseed but the entropy-provider sidecar is unavailable; build it with cargo.');
   }
   return new OsEntropySource();
 }

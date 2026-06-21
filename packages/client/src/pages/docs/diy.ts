@@ -45,7 +45,7 @@ export function renderVerify(): Child[] {
 export function renderRun(): Child[] {
   return [
     lead(
-      'PsyMeter is MIT-licensed and runs locally with no cloud and no budget. This is the practical guide to standing up the instrument, generating real physical entropy, running a witness node, and re-verifying data — everything you need to corroborate results yourself.',
+      'PsiMeter is MIT-licensed and runs locally with no cloud and no budget. This is the practical guide to standing up the instrument, generating real physical entropy, running a witness node, and re-verifying data — everything you need to corroborate results yourself.',
     ),
 
     h2('prereqs', 'Prerequisites'),
@@ -71,11 +71,11 @@ npm test               # build + unit-test core (node:test, zero extra deps)`,
     pre('npm start              # server at http://localhost:8787 (auto: RDSEED + drand)'),
     p('Behaviour is controlled by environment variables:'),
     defs([
-      [code('PSYMETER_ENTROPY'), ['os | rdseed — entropy source (', link(P.entropy, 'the ladder'), ').']],
-      [code('PSYMETER_BEACON'), ['drand | dev — the ', link(P.crypto, 'public beacon'), '.']],
-      [code('PSYMETER_LEDGER'), ['path to the ledger output directory.']],
-      [code('PSYMETER_PORT'), ['the HTTP/WS port (default 8787).']],
-      [code('PSYMETER_FAST'), ['1 — skip the ~3-minute human-pacing delay (for smoke tests).']],
+      [code('PSIMETER_ENTROPY'), ['os | rdseed — entropy source (', link(P.entropy, 'the ladder'), ').']],
+      [code('PSIMETER_BEACON'), ['drand | dev — the ', link(P.crypto, 'public beacon'), '.']],
+      [code('PSIMETER_LEDGER'), ['path to the ledger output directory.']],
+      [code('PSIMETER_PORT'), ['the HTTP/WS port (default 8787).']],
+      [code('PSIMETER_FAST'), ['1 — skip the ~3-minute human-pacing delay (for smoke tests).']],
     ]),
 
     h2('client-dev', 'Develop the website'),
@@ -94,20 +94,20 @@ npm run typecheck:client`,
     p('Point the server at one or more witnesses and set a quorum:'),
     pre(
 `# on the server:
-PSYMETER_WITNESS=http://localhost:8788    # comma-separate multiple URLs
-PSYMETER_WITNESS_THRESHOLD=1              # M-of-N quorum required
+PSIMETER_WITNESS=http://localhost:8788    # comma-separate multiple URLs
+PSIMETER_WITNESS_THRESHOLD=1              # M-of-N quorum required
 
 # on the witness node:
-PSYMETER_WITNESS_PORT=8788
-PSYMETER_WITNESS_KEY=<ed25519 key>        # the node's signing identity
-PSYMETER_WITNESS_FEED=<feed path>         # its append-only hash-chained feed
-PSYMETER_TSA_URL=<rfc3161 TSA>            # free, configurable time-stamp authority`,
+PSIMETER_WITNESS_PORT=8788
+PSIMETER_WITNESS_KEY=<ed25519 key>        # the node's signing identity
+PSIMETER_WITNESS_FEED=<feed path>         # its append-only hash-chained feed
+PSIMETER_TSA_URL=<rfc3161 TSA>            # free, configurable time-stamp authority`,
     ),
     p('Sessions with no co-signature seal ', code('witnessed:false'), ' and are never pooled with witnessed confirmatory data.'),
 
     h2('scripts', 'Corroborate, anchor, and reset'),
     pre(
-`npm run smoke          # headless transport + signing test (use PSYMETER_FAST=1)
+`npm run smoke          # headless transport + signing test (use PSIMETER_FAST=1)
 npm run smoke:witness  # headless witnessed end-to-end test (spawns witness + server)
 npm run anchor         # anchor the ledger head → publishable OpenTimestamps receipt
 npm run purge          # wipe local dev ledger output (keeps .gitkeep)
@@ -151,7 +151,7 @@ export function renderArchitecture(): Child[] {
 
     h2('layout', 'Repository layout'),
     pre(
-`psymeter/
+`psimeter/
   docs/                 spec, protocol, pre-registration
   schema/               shared JSON Schemas — cross-language source of truth
   packages/

@@ -1,11 +1,11 @@
-// Typed client for the PsyMeter server (packages/server/src/app.ts).
+// Typed client for the PsiMeter server (packages/server/src/app.ts).
 //
 // Handshake (spec §7.2): POST /api/sessions returns the pre-commitment + anchor;
 // the operator signs the pre-commitment and POSTs it to signPath; then a ONE-WAY
 // WebSocket streams checkpoints and the final seal. The socket is receive-only —
 // nothing this client sends can reach the generator (pillar 5).
 
-import type { LedgerEntry, ExperimentDefinition, BeaconRef, PsiScore, WitnessAttestation } from '@psymeter/core';
+import type { LedgerEntry, ExperimentDefinition, BeaconRef, PsiScore, WitnessAttestation } from '@psimeter/core';
 
 export type { PsiScore, WitnessAttestation };
 

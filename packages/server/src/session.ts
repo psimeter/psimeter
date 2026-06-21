@@ -8,7 +8,7 @@ import {
   type EntropySource,
   type ExperimentDefinition,
   type LedgerEntry,
-} from '@psymeter/core';
+} from '@psimeter/core';
 import type { LedgerStore } from './ledgerStore.js';
 
 /**

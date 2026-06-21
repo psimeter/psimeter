@@ -6,7 +6,7 @@
 
 import * as ed from '@noble/ed25519';
 
-const KEY_STORAGE = 'psymeter.operatorKey';
+const KEY_STORAGE = 'psimeter.operatorKey';
 let cachedPub: string | null = null;
 
 function toHex(bytes: Uint8Array): string {

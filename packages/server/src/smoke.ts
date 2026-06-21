@@ -7,7 +7,7 @@
  *   3. proves a BAD signature is rejected,
  *   4. drives the one-way WebSocket stream to completion.
  *
- *   PSYMETER_FAST=1 PSYMETER_ENTROPY=os npx tsx src/smoke.ts
+ *   PSIMETER_FAST=1 PSIMETER_ENTROPY=os npx tsx src/smoke.ts
  */
 import { generateKeyPairSync, sign as edSign } from 'node:crypto';
 import { WebSocket } from 'ws';

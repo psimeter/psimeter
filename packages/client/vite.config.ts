@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
-// PsyMeter public site build.
+// PsiMeter public site build.
 //
 // Dependencies (three, @noble/ed25519) are bundled from npm — NOT loaded from a
 // CDN at runtime — so the shipped bundle is pinned by package-lock and can be

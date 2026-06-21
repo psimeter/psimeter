@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import type { EntropySource, EntropyMetadata } from '@psymeter/core';
+import type { EntropySource, EntropyMetadata } from '@psimeter/core';
 
 /**
  * OS CSPRNG entropy source.

@@ -1,5 +1,5 @@
 {
-  "name": "@psymeter/core",
+  "name": "@psimeter/core",
   "version": "0.0.0",
   "private": true,
   "description": "Auditable cryptographic core: canonicalization, hashing, commitments, Merkle, ledger chaining, scoring. Pure and I/O-free.",

@@ -59,12 +59,12 @@ export function verifyQuicknetPulse(round: number, signatureHex: string, publicK
 /**
  * Offline placeholder, identical numbering to the server's DevBeacon so the two
  * INDEPENDENT processes agree on the round clock: round = floor(now / period)
- * from a FIXED epoch 0 (NOT process start), period 200 ms under PSYMETER_FAST.
+ * from a FIXED epoch 0 (NOT process start), period 200 ms under PSIMETER_FAST.
  * NON-CONFIRMATORY — for offline development/tests only.
  */
 export class DevWitnessBeacon implements WitnessBeacon {
   readonly id = 'dev';
-  private readonly periodMs = process.env.PSYMETER_FAST === '1' ? 200 : 1000;
+  private readonly periodMs = process.env.PSIMETER_FAST === '1' ? 200 : 1000;
 
   async latest(): Promise<WitnessPulse> {
     const round = Math.floor(Date.now() / this.periodMs);
@@ -74,7 +74,7 @@ export class DevWitnessBeacon implements WitnessBeacon {
 }
 
 export function selectWitnessBeacon(): WitnessBeacon {
-  return process.env.PSYMETER_BEACON === 'dev' ? new DevWitnessBeacon() : new DrandWitnessBeacon();
+  return process.env.PSIMETER_BEACON === 'dev' ? new DevWitnessBeacon() : new DrandWitnessBeacon();
 }
 
 function roundToBytesBE(round: number): Uint8Array {

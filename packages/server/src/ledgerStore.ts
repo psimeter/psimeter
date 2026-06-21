@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { appendEntry, type LedgerEntry, type LedgerEntryType } from '@psymeter/core';
+import { appendEntry, type LedgerEntry, type LedgerEntryType } from '@psimeter/core';
 
 /**
  * Minimal append-only, file-backed ledger (spec §8.5).
@@ -36,6 +36,6 @@ export class LedgerStore {
 
   /** Write the genesis entry if the ledger is empty. */
   ensureGenesis(): void {
-    if (!this.head) this.append('genesis', { note: 'psymeter dev ledger' });
+    if (!this.head) this.append('genesis', { note: 'psimeter dev ledger' });
   }
 }

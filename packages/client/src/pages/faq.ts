@@ -14,7 +14,7 @@ const GROUPS: Group[] = [
     title: 'The basics',
     items: [
       {
-        q: 'What is PsyMeter?',
+        q: 'What is PsiMeter?',
         a: ['A public platform for large-scale experiments testing for so-called ',
           el('em', {}, '“psi”'),
           ': whether a person can, by intention alone, bias a genuinely random physical process, or anticipate a random outcome before it exists. It has two halves — a rigorous scientific instrument, and a gamified website anyone in the world can use.'],
@@ -73,7 +73,7 @@ const GROUPS: Group[] = [
       },
       {
         q: 'Where does the randomness come from?',
-        a: ['Only a genuinely physical process could, even in principle, be nudged moment to moment. PsyMeter climbs a ladder of sources, recording exactly which one produced every session: the OS generator (plumbing and tests only — flagged non-confirmatory), your CPU\'s thermal-noise RDSEED instruction (real physical randomness, good for piloting), and open-hardware or quantum RNGs (the auditable, citable targets for confirmatory data collection).'],
+        a: ['Only a genuinely physical process could, even in principle, be nudged moment to moment. PsiMeter climbs a ladder of sources, recording exactly which one produced every session: the OS generator (plumbing and tests only — flagged non-confirmatory), your CPU\'s thermal-noise RDSEED instruction (real physical randomness, good for piloting), and open-hardware or quantum RNGs (the auditable, citable targets for confirmatory data collection).'],
       },
       {
         q: 'How do I verify a result myself?',
@@ -129,7 +129,7 @@ const GROUPS: Group[] = [
     items: [
       {
         q: 'What does mainstream science say about psi?',
-        a: ['It sits firmly outside the scientific consensus. No psi effect has been established to the standard other phenomena meet; reported effects are tiny and contested, and are usually attributed to publication bias, flexible analysis, or methodological flaws. PsyMeter\'s entire design is a direct response to those criticisms — which is the only way data collected here could move anyone.'],
+        a: ['It sits firmly outside the scientific consensus. No psi effect has been established to the standard other phenomena meet; reported effects are tiny and contested, and are usually attributed to publication bias, flexible analysis, or methodological flaws. PsiMeter\'s entire design is a direct response to those criticisms — which is the only way data collected here could move anyone.'],
       },
       {
         q: 'Has anyone reported effects before?',
@@ -141,7 +141,7 @@ const GROUPS: Group[] = [
             el('li', {}, [el('strong', {}, 'Global Consciousness Project. '), 'A worldwide network of RNGs reporting correlations with major events — intriguing to some, unconvincing to most statisticians.']),
             el('li', {}, [el('strong', {}, 'Rhine (Duke, 1930s) and later presentiment work (Radin and others). '), 'The origins of lab parapsychology — forced-choice card tests, and physiological responses recorded before a stimulus appears.']),
           ]),
-          'The honest summary: suggestive claims, persistent controversy, and nothing that has convinced the broader field. PsyMeter exists to collect data clean enough that the answer — yes or no — is hard to wave away.'],
+          'The honest summary: suggestive claims, persistent controversy, and nothing that has convinced the broader field. PsiMeter exists to collect data clean enough that the answer — yes or no — is hard to wave away.'],
       },
     ],
   },
@@ -197,7 +197,7 @@ export function renderFaq(outlet: HTMLElement): void {
         ]),
       ]),
       el('div', { class: 'callout closing' }, [
-        'Still curious, or found a hole? PsyMeter is open source — read the spec, the code, and the analysis script, and check any result yourself. ',
+        'Still curious, or found a hole? PsiMeter is open source — read the spec, the code, and the analysis script, and check any result yourself. ',
         el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run an experiment →'),
       ]),
     ]),

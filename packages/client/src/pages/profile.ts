@@ -3,7 +3,7 @@
 // among everyone, their session history, and — at the candidate threshold — the
 // opt-in contact form. Tied to the browser-held operator key (D6), no account.
 
-import { directionalZ, psiScore, canonicalize } from '@psymeter/core';
+import { directionalZ, psiScore, canonicalize } from '@psimeter/core';
 import { el } from '../ui';
 import type { Disposer } from '../router';
 import {

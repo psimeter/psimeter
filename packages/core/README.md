@@ -1,6 +1,6 @@
-# @psymeter/core
+# @psimeter/core
 
-The auditable cryptographic heart of PsyMeter. **Pure and I/O-free** so the
+The auditable cryptographic heart of PsiMeter. **Pure and I/O-free** so the
 correctness-critical logic can be reviewed and tested in isolation.
 
 | Module | Responsibility |
@@ -14,7 +14,7 @@ correctness-critical logic can be reviewed and tested in isolation.
 | `scoring` | Binomial z / Stouffer combination — **display only**, not authoritative |
 
 ```bash
-npm --workspace @psymeter/core test   # compiles, then runs node:test
+npm --workspace @psimeter/core test   # compiles, then runs node:test
 ```
 
 The canonical form here is mirrored byte-for-byte by `analysis/analyze.py`, which

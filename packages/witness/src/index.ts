@@ -1,5 +1,5 @@
 /**
- * PsyMeter witness node entry point (spec §7.4, D16).
+ * PsiMeter witness node entry point (spec §7.4, D16).
  *
  * An INDEPENDENT live witness: co-signs the experiment server's checkpoints
  * (micro-PK) and forced-choice commits (precognition) in real time, binding a
@@ -8,7 +8,7 @@
  * trusted witness keys, so federated peers strengthen the guarantee with no code
  * change.
  *
- *   PSYMETER_BEACON=dev PSYMETER_FAST=1 npm run witness    # offline pilot
+ *   PSIMETER_BEACON=dev PSIMETER_FAST=1 npm run witness    # offline pilot
  *   npm run witness                                         # real drand + TSA
  */
 import { dirname, isAbsolute, resolve } from 'node:path';
@@ -26,11 +26,11 @@ function repoPath(envValue: string | undefined, fallback: string): string {
   return isAbsolute(v) ? v : resolve(repoRoot, v);
 }
 
-const port = Number(process.env.PSYMETER_WITNESS_PORT ?? 8788);
-const feedPath = repoPath(process.env.PSYMETER_WITNESS_FEED, 'ledger/witness-feed.jsonl');
-const keyPath = repoPath(process.env.PSYMETER_WITNESS_KEY, 'ledger/witness-key.pem');
-const tsaUrl = process.env.PSYMETER_TSA_URL ?? 'https://freetsa.org/tsr';
-const tsaIntervalMs = Number(process.env.PSYMETER_WITNESS_TSA_INTERVAL_MS ?? 60_000);
+const port = Number(process.env.PSIMETER_WITNESS_PORT ?? 8788);
+const feedPath = repoPath(process.env.PSIMETER_WITNESS_FEED, 'ledger/witness-feed.jsonl');
+const keyPath = repoPath(process.env.PSIMETER_WITNESS_KEY, 'ledger/witness-key.pem');
+const tsaUrl = process.env.PSIMETER_TSA_URL ?? 'https://freetsa.org/tsr';
+const tsaIntervalMs = Number(process.env.PSIMETER_WITNESS_TSA_INTERVAL_MS ?? 60_000);
 
 const beacon = selectWitnessBeacon();
 const identity = loadOrCreateIdentity(keyPath);
@@ -39,7 +39,7 @@ const server = createWitnessServer({ beacon, identity, feed, tsaUrl });
 
 server.listen(port, () => {
   // eslint-disable-next-line no-console
-  console.log(`PsyMeter witness listening on http://localhost:${port}`);
+  console.log(`PsiMeter witness listening on http://localhost:${port}`);
   // eslint-disable-next-line no-console
   console.log(`[witness] pubkey ${identity.pubKey}`);
   // eslint-disable-next-line no-console

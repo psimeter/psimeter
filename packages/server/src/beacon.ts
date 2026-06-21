@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { bls12_381 } from '@noble/curves/bls12-381';
-import type { BeaconRef } from '@psymeter/core';
+import type { BeaconRef } from '@psimeter/core';
 
 /**
  * Public randomness beacon (spec §7, D2).
@@ -137,8 +137,8 @@ export class DevBeacon implements BeaconProvider {
   private readonly genesisMs = 0;
 
   constructor() {
-    // Fast rounds under PSYMETER_FAST so a full precog session runs in seconds.
-    this.periodMs = process.env.PSYMETER_FAST === '1' ? 200 : 1000;
+    // Fast rounds under PSIMETER_FAST so a full precog session runs in seconds.
+    this.periodMs = process.env.PSIMETER_FAST === '1' ? 200 : 1000;
     this.periodSeconds = this.periodMs / 1000;
   }
 
@@ -168,7 +168,7 @@ export class DevBeacon implements BeaconProvider {
   }
 }
 
-/** Default to the real drand beacon; `PSYMETER_BEACON=dev` for offline work. */
+/** Default to the real drand beacon; `PSIMETER_BEACON=dev` for offline work. */
 export function selectBeacon(): BeaconProvider {
-  return process.env.PSYMETER_BEACON === 'dev' ? new DevBeacon() : new DrandBeacon();
+  return process.env.PSIMETER_BEACON === 'dev' ? new DevBeacon() : new DrandBeacon();
 }

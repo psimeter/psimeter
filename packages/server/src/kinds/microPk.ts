@@ -1,4 +1,4 @@
-import { MerkleAccumulator, sessionZ, type LedgerEntry, type WitnessAttestation } from '@psymeter/core';
+import { MerkleAccumulator, sessionZ, type LedgerEntry, type WitnessAttestation } from '@psimeter/core';
 import type { WebSocket } from 'ws';
 import type { LedgerStore } from '../ledgerStore.js';
 import type { SessionContext } from '../session.js';

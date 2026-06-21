@@ -43,7 +43,7 @@ export function buildShell(): Shell {
   const header = el('header', { class: 'site-header' }, [
     el('a', { href: '/', 'data-link': true, class: 'brand' }, [
       el('span', { class: 'brand-mark' }),
-      el('span', { class: 'brand-name' }, 'PsyMeter'),
+      el('span', { class: 'brand-name' }, 'PsiMeter'),
     ]),
     el('nav', { class: 'nav' }, navLinks),
     chip,

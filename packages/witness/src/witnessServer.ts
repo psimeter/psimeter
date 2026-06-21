@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
-import { witnessStatement, type WitnessSubjectKind } from '@psymeter/core';
+import { witnessStatement, type WitnessSubjectKind } from '@psimeter/core';
 import type { WitnessBeacon } from './beacon.js';
 import type { WitnessIdentity } from './sign.js';
 import type { WitnessFeed } from './witnessFeed.js';

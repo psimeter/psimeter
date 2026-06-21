@@ -1,5 +1,5 @@
 /**
- * @psymeter/core — the auditable cryptographic heart.
+ * @psimeter/core — the auditable cryptographic heart.
  *
  * Pure and I/O-free by design, so the correctness-critical logic (commitments,
  * Merkle, ledger chaining, canonicalization) can be reviewed and unit-tested in

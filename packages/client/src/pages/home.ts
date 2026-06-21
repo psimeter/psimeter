@@ -20,7 +20,7 @@ export function renderHome(outlet: HTMLElement): Disposer {
           el('span', { class: 'eyebrow' }, 'Free · anonymous · no sign-up'),
           el('h1', {}, ['Can your mind ', el('span', { class: 'grad' }, 'beat chance'), '?']),
           el('p', { class: 'lede' },
-            'PsyMeter is an open platform of experiments built around one old, unsettled question: can a person, by intention alone, influence — or foresee — a genuinely physical random process? The randomness is real (quantum and thermal noise, not a pseudo-random algorithm), and every result is sealed before it exists, so anyone can check it. Pick an experiment and find out.'),
+            'PsiMeter is an open platform of experiments built around one old, unsettled question: can a person, by intention alone, influence — or foresee — a genuinely physical random process? The randomness is real (quantum and thermal noise, not a pseudo-random algorithm), and every result is sealed before it exists, so anyone can check it. Pick an experiment and find out.'),
           el('div', { class: 'cta-row' }, [
             el('a', { class: 'btn primary lg', href: '/experiments', 'data-link': true }, 'Pick an experiment →'),
             el('a', { class: 'btn lg ghost', href: '/about', 'data-link': true }, 'How it works'),

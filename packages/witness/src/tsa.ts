@@ -13,7 +13,7 @@
  * the token's TSTInfo to read genTime + confirm the messageImprint is our head.
  *
  * Default TSA is freeTSA.org (RFC 3161 over HTTP, no account, no cost);
- * override with PSYMETER_TSA_URL.
+ * override with PSIMETER_TSA_URL.
  */
 
 // AlgorithmIdentifier for SHA-256: SEQUENCE { OID 2.16.840.1.101.3.4.2.1, NULL }.
@@ -40,7 +40,7 @@ export async function requestTimestamp(tsaUrl: string, digest: Uint8Array): Prom
     headers: {
       'Content-Type': 'application/timestamp-query',
       Accept: 'application/timestamp-reply',
-      'User-Agent': 'psymeter-witness',
+      'User-Agent': 'psimeter-witness',
     },
     body: buildTimeStampReq(digest),
     signal: AbortSignal.timeout(15000),

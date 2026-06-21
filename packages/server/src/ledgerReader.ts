@@ -7,7 +7,7 @@ import {
   type PsiScore,
   type Choice,
   type LedgerEntry,
-} from '@psymeter/core';
+} from '@psimeter/core';
 
 /**
  * Read-only view over the append-only ledger (spec §8.5) for the public site's

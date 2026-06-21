@@ -1,8 +1,8 @@
 {
-  "name": "@psymeter/witness",
+  "name": "@psimeter/witness",
   "version": "0.0.0",
   "private": true,
-  "description": "PsyMeter independent live-witness node: co-signs checkpoints/choices in real time, binding a fresh self-verified drand round + RFC 3161 TSA, on its own append-only feed (spec D16).",
+  "description": "PsiMeter independent live-witness node: co-signs checkpoints/choices in real time, binding a fresh self-verified drand round + RFC 3161 TSA, on its own append-only feed (spec D16).",
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@noble/curves": "^1.6.0",
-    "@psymeter/core": "*"
+    "@psimeter/core": "*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

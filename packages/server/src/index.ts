@@ -1,5 +1,5 @@
 /**
- * PsyMeter server entry point.
+ * PsiMeter server entry point.
  *
  * Starts the HTTP + one-way WebSocket server and serves the operator UI. Open
  * the printed URL, choose an intention, and run a session; the generation runs
@@ -7,9 +7,9 @@
  */
 import { createApp } from './app.js';
 
-const port = Number(process.env.PSYMETER_PORT ?? 8787);
+const port = Number(process.env.PSIMETER_PORT ?? 8787);
 
 createApp().listen(port, () => {
   // eslint-disable-next-line no-console
-  console.log(`PsyMeter server listening on http://localhost:${port}`);
+  console.log(`PsiMeter server listening on http://localhost:${port}`);
 });

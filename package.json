@@ -1,5 +1,5 @@
 {
-  "name": "psymeter",
+  "name": "psimeter",
   "version": "0.0.0",
   "private": true,
   "description": "Auditable platform for large-scale RNG-influence (micro-PK) and precognition experiments.",
@@ -12,17 +12,17 @@
     "packages/client"
   ],
   "scripts": {
-    "test": "npm --workspace @psymeter/core run test",
-    "build:core": "npm --workspace @psymeter/core run build",
-    "build:client": "npm --workspace @psymeter/client run build",
+    "test": "npm --workspace @psimeter/core run test",
+    "build:core": "npm --workspace @psimeter/core run build",
+    "build:client": "npm --workspace @psimeter/client run build",
     "build": "npm run build:core && npm run build:client",
-    "typecheck:client": "npm --workspace @psymeter/client run typecheck",
-    "dev:client": "npm --workspace @psymeter/client run dev",
-    "start": "npm --workspace @psymeter/server run start",
-    "witness": "npm --workspace @psymeter/witness run start",
-    "smoke": "npm --workspace @psymeter/server run smoke",
-    "smoke:witness": "npm --workspace @psymeter/server run smoke:witness",
-    "anchor": "npm --workspace @psymeter/server run anchor",
+    "typecheck:client": "npm --workspace @psimeter/client run typecheck",
+    "dev:client": "npm --workspace @psimeter/client run dev",
+    "start": "npm --workspace @psimeter/server run start",
+    "witness": "npm --workspace @psimeter/witness run start",
+    "smoke": "npm --workspace @psimeter/server run smoke",
+    "smoke:witness": "npm --workspace @psimeter/server run smoke:witness",
+    "anchor": "npm --workspace @psimeter/server run anchor",
     "purge": "node scripts/purge-ledger.mjs"
   }
 }

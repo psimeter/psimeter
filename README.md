@@ -1,4 +1,4 @@
-# PsyMeter
+# PsiMeter
 
 An open-source platform for large-scale, anonymous, web-based experiments that test
 for putative **psi** effects — whether a human observer can, by intention alone,
@@ -66,7 +66,7 @@ python analysis/analyze.py ledger/dev.jsonl
 npm run anchor
 ```
 
-Headless transport check (no browser): `PSYMETER_FAST=1 PSYMETER_ENTROPY=os npm run smoke`.
+Headless transport check (no browser): `PSIMETER_FAST=1 PSIMETER_ENTROPY=os npm run smoke`.
 
 ## Entropy sources (spec D1)
 

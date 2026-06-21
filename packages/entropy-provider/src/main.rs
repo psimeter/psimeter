@@ -1,4 +1,4 @@
-//! PsyMeter entropy-provider — a deliberately tiny sidecar whose ONLY job is to
+//! PsiMeter entropy-provider — a deliberately tiny sidecar whose ONLY job is to
 //! emit RAW, UNCONDITIONED random bytes from a hardware source, so the rest of
 //! the platform (TypeScript) never contains CPU/hardware-specific code. Keeping
 //! the entropy path small and dependency-free makes it auditable in one sitting.
@@ -6,7 +6,7 @@
 //! Source: `rdseed` — the CPU's on-die thermal-noise entropy source exposed via
 //! the RDSEED instruction (NOT rdrand, which is a CSPRNG reseeded by it). This
 //! is a genuine physical, nondeterministic source. It is whitened on-die and
-//! vendor-opaque, so PsyMeter treats it as PILOT-GRADE / non-confirmatory (D1).
+//! vendor-opaque, so PsiMeter treats it as PILOT-GRADE / non-confirmatory (D1).
 //!
 //! This program performs NO conditioning/whitening of its own (spec D10).
 //!
