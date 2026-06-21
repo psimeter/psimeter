@@ -1,0 +1,75 @@
+{
+  "_about": "Normative known-answer vectors for section 11.2 (presentiment). derivePresentimentTarget: valence = SHA256(bytes(B_R) || uint32_be(trialIndex))[0] & 1; imageIndex = uint64_be(digest[8..16]) mod poolSize. trialCommit = SHA256(PCJ(input)).",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "11.2",
+  "requirements": [
+    "PSI-PRECOG-1",
+    "PSI-PRECOG-2"
+  ],
+  "derivePresentimentTarget": [
+    {
+      "trialIndex": 0,
+      "beaconValue": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+      "calmCount": 10,
+      "aversiveCount": 7,
+      "valence": 1,
+      "imageIndex": 2
+    },
+    {
+      "trialIndex": 1,
+      "beaconValue": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+      "calmCount": 10,
+      "aversiveCount": 7,
+      "valence": 0,
+      "imageIndex": 4
+    },
+    {
+      "trialIndex": 2,
+      "beaconValue": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+      "calmCount": 10,
+      "aversiveCount": 7,
+      "valence": 0,
+      "imageIndex": 5
+    },
+    {
+      "trialIndex": 3,
+      "beaconValue": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+      "calmCount": 10,
+      "aversiveCount": 7,
+      "valence": 0,
+      "imageIndex": 1
+    },
+    {
+      "trialIndex": 4,
+      "beaconValue": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+      "calmCount": 10,
+      "aversiveCount": 7,
+      "valence": 0,
+      "imageIndex": 9
+    },
+    {
+      "trialIndex": 5,
+      "beaconValue": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+      "calmCount": 10,
+      "aversiveCount": 7,
+      "valence": 1,
+      "imageIndex": 6
+    }
+  ],
+  "trialCommit": [
+    {
+      "id": "micropk-style",
+      "input": {
+        "sessionId": "s1",
+        "trialIndex": 0,
+        "choice": "A",
+        "targetRound": 100,
+        "prevBeaconRound": 98,
+        "operatorPubKey": "ed25519:abc"
+      },
+      "canonical": "{\"choice\":\"A\",\"operatorPubKey\":\"ed25519:abc\",\"prevBeaconRound\":98,\"sessionId\":\"s1\",\"targetRound\":100,\"trialIndex\":0}",
+      "trialCommit": "sha256:6ecdfac93181f0112e2654a3cec7c7cb65fc700318937a4350824d649f7d2e81"
+    }
+  ]
+}

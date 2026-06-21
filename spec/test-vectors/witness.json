@@ -1,0 +1,69 @@
+{
+  "_about": "Normative known-answer vectors for section 13 (witness). witnessStatement = SHA256(PCJ(input)); trialIndex omitted when absent. Quorum counts DISTINCT trusted keys vs the threshold (signatures assumed already verified).",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "13",
+  "requirements": [
+    "PSI-WITNESS-1",
+    "PSI-WITNESS-5"
+  ],
+  "witnessStatement": [
+    {
+      "id": "per-trial-choice",
+      "input": {
+        "subjectHash": "sha256:6ecdfac93181f0112e2654a3cec7c7cb65fc700318937a4350824d649f7d2e81",
+        "sessionId": "s1",
+        "trialIndex": 0,
+        "kind": "choice",
+        "witnessRound": 100,
+        "witnessChainHash": "52db9ba70e0cc0f6",
+        "witnessPubKey": "ed25519:abc"
+      },
+      "canonical": "{\"kind\":\"choice\",\"sessionId\":\"s1\",\"subjectHash\":\"sha256:6ecdfac93181f0112e2654a3cec7c7cb65fc700318937a4350824d649f7d2e81\",\"trialIndex\":0,\"witnessChainHash\":\"52db9ba70e0cc0f6\",\"witnessPubKey\":\"ed25519:abc\",\"witnessRound\":100}",
+      "statement": "sha256:b10ab2c2e99f076fcd456f28ede6f8ed5cc7020c7f6ece2ff8c572721fcad85f"
+    },
+    {
+      "id": "session-checkpoint",
+      "input": {
+        "subjectHash": "sha256:deadbeef",
+        "sessionId": "s1",
+        "kind": "checkpoint",
+        "witnessRound": 42,
+        "witnessChainHash": "52db9ba70e0cc0f6",
+        "witnessPubKey": "ed25519:abc"
+      },
+      "canonical": "{\"kind\":\"checkpoint\",\"sessionId\":\"s1\",\"subjectHash\":\"sha256:deadbeef\",\"witnessChainHash\":\"52db9ba70e0cc0f6\",\"witnessPubKey\":\"ed25519:abc\",\"witnessRound\":42}",
+      "statement": "sha256:283ffbcceffca9aac528dd5eed6f0dc52b91d8a9a4b00d6e1731c0442ec96ebd"
+    }
+  ],
+  "quorum": [
+    {
+      "id": "two-distinct-ok",
+      "trustedKeys": [
+        "ed25519:w1",
+        "ed25519:w2"
+      ],
+      "threshold": 2,
+      "witnessPubKeys": [
+        "ed25519:w1",
+        "ed25519:w2"
+      ],
+      "ok": true,
+      "distinctTrusted": 2
+    },
+    {
+      "id": "duplicate-not-counted",
+      "trustedKeys": [
+        "ed25519:w1",
+        "ed25519:w2"
+      ],
+      "threshold": 2,
+      "witnessPubKeys": [
+        "ed25519:w1",
+        "ed25519:w1"
+      ],
+      "ok": false,
+      "distinctTrusted": 1
+    }
+  ]
+}

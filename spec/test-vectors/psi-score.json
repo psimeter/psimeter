@@ -1,0 +1,94 @@
+{
+  "_about": "Normative known-answer vectors for section 12.2 (psi score). W = (1/J) sum_j exp(delta_j*S - n*delta_j^2/2) over the frozen grid; points = max(0, round(10*log10 W)); candidate requires W>=1000 AND >=5 scored sessions.",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "12.2",
+  "requirements": [
+    "PSI-EVALUE-2",
+    "PSI-EVALUE-3",
+    "PSI-EVALUE-4"
+  ],
+  "grid": [
+    0.1,
+    0.2,
+    0.4,
+    0.8
+  ],
+  "vectors": [
+    {
+      "id": "empty",
+      "dirzs": [],
+      "scoredSessions": 0,
+      "sumZ": 0,
+      "wealth": 1,
+      "points": 0,
+      "anytimeP": 1,
+      "sigma": 0,
+      "tierName": "Baseline",
+      "isCandidate": false
+    },
+    {
+      "id": "one-session-z3",
+      "dirzs": [
+        3
+      ],
+      "scoredSessions": 1,
+      "sumZ": 3,
+      "wealth": 3.5496219767564274,
+      "points": 6,
+      "anytimeP": 0.2817201399326978,
+      "sigma": 0.5777390961639255,
+      "tierName": "Flicker",
+      "isCandidate": false
+    },
+    {
+      "id": "against-direction",
+      "dirzs": [
+        -3
+      ],
+      "scoredSessions": 1,
+      "sumZ": -3,
+      "wealth": 0.40474496671647486,
+      "points": 0,
+      "anytimeP": 1,
+      "sigma": 0,
+      "tierName": "Baseline",
+      "isCandidate": false
+    },
+    {
+      "id": "candidate-5x3",
+      "dirzs": [
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "scoredSessions": 5,
+      "sumZ": 15,
+      "wealth": 8288.149315752966,
+      "points": 39,
+      "anytimeP": 0.0001206541969628055,
+      "sigma": 3.6713121586175546,
+      "tierName": "Candidate",
+      "isCandidate": true
+    },
+    {
+      "id": "wealth-but-too-few",
+      "dirzs": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "scoredSessions": 4,
+      "sumZ": 12,
+      "wealth": 1051.7061823647018,
+      "points": 30,
+      "anytimeP": 0.0009508359052825539,
+      "sigma": 3.105173902564106,
+      "tierName": "Strong signal",
+      "isCandidate": false
+    }
+  ]
+}

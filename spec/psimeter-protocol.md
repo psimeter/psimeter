@@ -43,7 +43,7 @@
 - [Appendix A. Test vectors](#appendix-a-test-vectors)
 - [Appendix B. Design rationale](#appendix-b-design-rationale)
 
-> **Drafting status.** Sections 1–10, 16, and 17 are written. Sections 11–15 are present as scoped
+> **Drafting status.** Sections 1–13, 16, and 17 are written. Sections 14–15 are present as scoped
 > stubs that name the source material, the implementing module, and the frozen golden vectors
 > they will formalize; they are being filled in section order. Nothing in a stub is normative
 > yet.
@@ -568,39 +568,155 @@ jitter or GC pauses can perturb the animation, never the bit counts.
 
 ## 11. Experiment kinds
 
-> *Stub — to be written.*
->
-> **11.1 Binary micro-PK** — trial = sum of `trialBits` raw bits; tripolar HIGH/LOW/BASELINE;
-> fixed N; the `binary-micropk v1` PEAR-anchored defaults. Source: legacy D13, D10.
->
-> **11.2 Presentiment (forced-choice precognition)** — the per-trial sequence, the
-> future-drand-round target, `derivePresentimentTarget` (`valence = H(B_R ‖ uint32(trialIndex))[0]
-> & 1`; image index from a disjoint digest slice), the content-hash-pinned CC0 stimulus corpus,
-> the per-trial choice commit/signature, and the `R > R₀` timing rule. Source: legacy §7.5, D14;
-> [`precog.ts`](../packages/core/src/precog.ts). Golden vectors (`derivePresentimentTarget`,
-> `trialCommit`) → `test-vectors/presentiment.json`.
+All kinds share the provenance spine of §6–§10 and §13; they differ only in the choice vocabulary,
+the generation/reveal protocol, and the scoring. Two kinds are defined.
+
+### 11.1 Binary micro-PK (`micro-pk-binary`)
+
+The operator declares one of `HIGH`, `LOW`, `BASELINE` before the run (§7); a fixed-length stream of
+raw bits is then generated under one-way isolation (§10).
+
+- **[PSI-PK-1]** The committed vocabulary is exactly `{HIGH, LOW, BASELINE}` (§6). The confirmatory
+  contrast is HIGH vs LOW (which cancels static source bias); BASELINE runs are calibration and are
+  excluded from scoring (§12).
+- **[PSI-PK-2]** A trial is `trialBits` consecutive raw bits; `trialBits` MUST be a multiple of 8.
+  The recorded statistic is `ones` out of `nSamples` bits. The mapping is frozen by the definition
+  (§6, §10/PSI-GEN-6).
+
+The published `binary-micropk` v1 parameters (PEAR-anchored) are `trialBits = 200`,
+`bitRatePerSec = 1000`, `sessionSeconds = 180`, `trialsPerSession = 900`, `bitsPerSession = 180000`,
+`checkpointEveryTrials = 5`, `intentionAssignment = "volitional"`, `conditioning = "none"`. *(These
+are values of the published definition, not protocol constants; any change bumps the version and the
+hash, §6.)*
+
+### 11.2 Presentiment / forced-choice precognition (`precognition-presentiment`)
+
+The operator predicts, before each trial's target exists, the **valence** of an image they are about
+to be shown — `calm` or `aversive`. The target is derived purely from a *future* beacon round, so
+neither party can know it at choice time; this is what makes the necessarily-interactive (two-way)
+channel sound.
+
+- **[PSI-PRECOG-1] Target derivation.** Given the future round's randomness `B_R` (hex):
+  `digest = SHA-256( bytes(B_R) ‖ uint32_be(trialIndex) )`; `valence = digest[0] & 1` (0 = calm,
+  1 = aversive) — a single bit, hence an exact fair coin regardless of pool sizes; and
+  `imageIndex = uint64_be(digest[8..16]) mod poolSize`, where `poolSize` is the size of the selected
+  valence's pool in the (content-hashed) definition. The selected image is therefore pinned by the
+  definition hash.
+- **[PSI-PRECOG-2] Per-trial commitment & timing.** Let `R0` be the latest published round at choice
+  time and `R = R0 + beaconRoundOffset` the bound target round. The operator MUST sign
+  `trialCommit = H(PCJ({sessionId, trialIndex, choice, targetRound, prevBeaconRound, operatorPubKey}))`
+  (with `targetRound = R`, `prevBeaconRound = R0`) with their Ed25519 key (§5.3) **before** `R` is
+  published. `R > R0` proves the target was future at commit time.
+- **[PSI-PRECOG-3] Scoring.** The target round's pulse MUST be BLS-verified (§8) before deriving the
+  target; a `hit` is `1` iff the predicted valence equals the derived valence, else `0`.
+- **[PSI-PRECOG-4] Per-trial record & re-verification.** Each trial folds into the session Merkle
+  commitment (§10) as one leaf over `PCJ(record)`, the record carrying `{trialIndex, choice,
+  targetRound, prevBeaconRound, beaconValue, valence, imagePath, imageSha256, hit, operatorSig,
+  [witness]}`; the full trial list is the content-addressed raw blob, and the `session.seal` payload
+  carries `{…, trials, hits, optionsPerTrial}`. A verifier re-derives each `{valence, imageIndex}`
+  from `B_R`, confirms the shown image against the committed manifest, **re-hashes the served image
+  bytes** against `imageSha256`, checks each `operatorSig` and `R > R0`, and recomputes the Merkle
+  root — the full chain beacon → committed image hash → real pixels → valence → hit.
+
+The published `precognition-presentiment` v1 uses `trialsPerSession = 20`, `optionsPerTrial = 2`,
+`beaconRoundOffset = 2`, a `contentWarning`, and a content-hash-pinned CC0 `stimuli` corpus (two
+valence pools).
+
+*Reference:* [`precog.ts`](../packages/core/src/precog.ts),
+[`precog.ts` (server)](../packages/server/src/kinds/precog.ts).
+*Test vectors:* [`test-vectors/presentiment.json`](test-vectors/presentiment.json).
 
 ## 12. Scoring
 
-> *Stub — to be written.*
->
-> **12.1 Display statistics (non-authoritative)** — `sessionZ`, `hitRateZ`, Stouffer combination;
-> explicitly display-only (§3.2).
->
-> **12.2 The psi-score e-value** — the anytime-valid test martingale
-> `W = mean_j exp(δ_j·S − n·δ_j²/2)` over the fixed grid `[0.1, 0.2, 0.4, 0.8]`, one-sided;
-> decibans `points = 10·log10(W)`; the candidate threshold (`W ≥ 1000` **and** ≥ 5 scored
-> sessions). Validity rests on Ville's inequality. Source: legacy D15;
-> [`psi.ts`](../packages/core/src/psi.ts). Golden vector (`psiScore([3]) = 3.5496219767564274`) →
-> `test-vectors/psi-score.json`.
+### 12.1 Display statistics (non-authoritative)
+
+On-screen statistics are **display-only** (§3.2); the authoritative numbers are recomputed by the
+analysis pipeline over the published raw data.
+
+- **[PSI-SCORE-1]** The micro-PK per-session display statistic is `z = (ones − n/2) / sqrt(n/4)` for
+  `n = nSamples`. The precognition statistic is the hit-rate z `= (hits − n·p) / sqrt(n·p·(1−p))`
+  with `p = 1/optionsPerTrial`. Independent sessions combine via Stouffer `Z = (Σ z) / sqrt(k)`.
+  None of these MUST appear in a committed payload (§9/PSI-LEDGER-5).
+
+### 12.2 The psi score (anytime-valid e-value)
+
+The per-operator public score is an **anytime-valid test martingale** measuring consistent,
+declared-direction deviation across an operator's own sessions (hypothesis H1). Because players stop
+at favorable peaks (operator-level optional stopping), a fixed-N statistic would be invalid; a test
+martingale is anytime-valid by Ville's inequality, so live monitoring and even ranking by *peak*
+wealth preserve the false-positive guarantee.
+
+- **[PSI-EVALUE-1]** Each scored session contributes a **directional z** `d_i`: micro-PK `HIGH → +z`,
+  `LOW → −z`; `BASELINE` is excluded; per-trial kinds (precognition) are already oriented (`d = z`);
+  an unknown vocabulary does not score. Under H0, `d_i ~ N(0,1)`.
+- **[PSI-EVALUE-2]** With `S = Σ d_i` over `n` scored sessions, the wealth is the equal-weight
+  one-sided mixture `W = (1/J)·Σ_j exp(δ_j·S − n·δ_j²/2)` over the **frozen grid**
+  `δ ∈ {0.1, 0.2, 0.4, 0.8}` (`J = 4`); with no sessions `W = 1`. Each component is a martingale
+  (`E[exp(δZ − δ²/2)] = 1` for `Z~N(0,1)`), so any fixed mixture is too; any fixed grid is valid
+  (Ville) — the grid affects power, not validity. `W` MUST be computed in log-space (log-sum-exp).
+- **[PSI-EVALUE-3]** Display mappings: `points = max(0, round(10·log10 W))` (decibans);
+  `anytimeP = min(1, 1/W)`; `sigma = Φ⁻¹(1 − anytimeP)` (floored at 0).
+- **[PSI-EVALUE-4]** **Candidate** status requires `W ≥ 1000` **and** `≥ 5` scored sessions. It is a
+  SCREENING flag meaning "flagged for a separate, pre-registered, fixed-N confirmatory replication" —
+  never, by itself, proof of psi. A leaderboard MUST present the expected-by-chance candidate count
+  alongside.
+
+For confirmatory use the grid and threshold SHOULD be pinned into the hash-bound experiment
+definition (§6) so they cannot become a hidden experimenter degree of freedom.
+
+*Reference:* [`scoring.ts`](../packages/core/src/scoring.ts), [`psi.ts`](../packages/core/src/psi.ts).
+*Test vectors:* [`test-vectors/psi-score.json`](test-vectors/psi-score.json).
 
 ## 13. Witness protocol
 
-> *Stub — to be written.* Will specify the `witnessStatement` canonical form, the attestation
-> object, the M-of-N quorum rule (counting **distinct trusted** keys, trusted set chosen by the
-> auditor), what is witnessed per kind, and the trusted-time roots (self-verified drand round +
-> RFC 3161 TSA + OTS/Bitcoin). Source: legacy D16, §7.4; [`witness.ts`](../packages/core/src/witness.ts).
-> Golden vectors (`witnessStatement`, quorum) → `test-vectors/witness.json`.
+Two attacks survive the §6–§10 accounting because the server alone produces every artifact:
+**parallel runs** (micro-PK — privately roll several streams, seal the flattering one) and
+**choice-timing / backdating** (precognition — lie about when a choice arrived). Independent **live
+witnesses** that co-sign artifacts in real time close both (see §15).
+
+### 13.1 Statement and attestation
+
+A witness is an independent process with its own Ed25519 key that co-signs a subject and publishes
+the co-signature on its own append-only, hash-chained feed.
+
+- **[PSI-WITNESS-1]** The signed statement is `witnessStatement = H(PCJ({subjectHash, sessionId,
+  trialIndex?, kind, witnessRound, witnessChainHash, witnessPubKey}))`, where
+  `kind ∈ {open, checkpoint, choice, seal}` and `trialIndex` is **present only** for per-trial
+  (`choice`) subjects (omitted otherwise, per §4). The witness signs the UTF-8 bytes of this hash
+  string (§5.3/PSI-SIG-3).
+- **[PSI-WITNESS-2]** An attestation carries `{witnessPubKey, witnessRound, witnessChainHash,
+  witnessSig, feedSeq?, feedEntryHash?}`. `witnessRound` is bound *inside* the signed statement, so
+  the time anchor cannot be detached from it.
+
+### 13.2 What is witnessed
+
+- **[PSI-WITNESS-3]** Micro-PK: the `open` (subject = `openEntryHash`), **every checkpoint root**,
+  and the `seal` (subject = `outputCommitment`). The sealed `outputCommitment` MUST be the Merkle
+  continuation of the witnessed checkpoint prefixes (recomputable from the raw blob), so a
+  privately-rolled alternate stream cannot be substituted at seal.
+- **[PSI-WITNESS-4]** Precognition: **each forced-choice commit** (subject = `trialCommit`),
+  co-signed while its target round is still future (`witnessRound < targetRound`; the witness MUST
+  refuse otherwise), plus the `open` and `seal`.
+
+### 13.3 Quorum and trust
+
+- **[PSI-WITNESS-5]** The trusted witness key set and threshold `M` are an **auditor input** (the
+  auditor's own published list — never the server's say-so), optionally pinned in the hash-bound
+  definition (§6) for confirmatory use. A verifier counts the **distinct trusted** keys among the
+  signature-verified attestations and requires at least `M` (with `M ≥ 1`). The protocol is M-of-N
+  capable; the reference deployment is N = 1 / M = 1.
+
+### 13.4 Trusted time and the feed
+
+- **[PSI-WITNESS-6]** Each attestation binds a drand round the witness fetched and BLS-verified
+  itself; for precognition `witnessRound < targetRound` is the publicly re-checkable timing fact. The
+  witness feed (a sibling hash-chained log of `witness.attest` entries, §9) is periodically stamped
+  with an RFC 3161 TSA and anchored long-term (OpenTimestamps / Bitcoin); the main ledger
+  cross-references the feed head via a `witness.anchor` entry. *(At N = 1 with an operator-run
+  witness, the un-forgeable time root is the TSA, not the node itself — see §15.)*
+
+*Reference:* [`witness.ts`](../packages/core/src/witness.ts).
+*Test vectors:* [`test-vectors/witness.json`](test-vectors/witness.json).
 
 ## 14. Verification procedure
 
@@ -680,9 +796,9 @@ cross-language byte-parity (G6) becomes a CI gate.
 | [`experiment.json`](test-vectors/experiment.json) | §6 | present |
 | [`precommit.json`](test-vectors/precommit.json) | §7 | present |
 | [`ledger.json`](test-vectors/ledger.json) | §9 | present |
-| `presentiment.json` | §11.2 | planned |
-| `psi-score.json` | §12 | planned |
-| `witness.json` | §13 | planned |
+| [`presentiment.json`](test-vectors/presentiment.json) | §11.2 | present |
+| [`psi-score.json`](test-vectors/psi-score.json) | §12 | present |
+| [`witness.json`](test-vectors/witness.json) | §13 | present |
 
 ## Appendix B. Design rationale
 
