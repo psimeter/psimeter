@@ -16,7 +16,7 @@ that possible.
 | File | Status | Contents |
 |------|--------|----------|
 | [`psimeter-protocol.md`](psimeter-protocol.md) | **Normative** | The protocol: canonicalization, cryptographic primitives, pre-commitment, beacon binding, ledger format, experiment kinds, scoring, the witness protocol, and the verification procedure. |
-| [`RATIONALE.md`](RATIONALE.md) | Informative | *Why* each decision was made — the D1–D16 decision log, the threat model, and the residual-trust accounting. Migrated from the legacy design document. |
+| [`RATIONALE.md`](RATIONALE.md) | Informative | *Why* it is built this way — the design pillars, the two hypotheses, the **decision log (D1–D16)**, the threat model, and the residual-trust accounting. The former `docs/SPECIFICATION.md`, verbatim. |
 | [`test-vectors/`](test-vectors/) | **Normative** | Machine-readable known-answer vectors. A conforming implementation MUST reproduce them. Loaded as the shared fixtures of both the `packages/core` test suite and `analysis/analyze.py --check-vectors`, so CI fails if either drifts. |
 | [`../schema/`](../schema/) | **Normative** | JSON Schemas for ledger entries and experiment definitions. |
 

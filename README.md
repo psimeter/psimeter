@@ -5,9 +5,10 @@ for putative **psi** effects — whether a human observer can, by intention alon
 bias a *live physical* random process (micro-psychokinesis), or anticipate a future
 random outcome better than chance (precognition).
 
-> **Status:** Phase 1 scaffold. The methodology is locked in
-> [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md); this repository now contains the
-> auditable cryptographic core, a raw-entropy sidecar, and the surrounding skeleton.
+> **Status:** Phase 1 scaffold. The methodology is specified in
+> [`spec/psimeter-protocol.md`](spec/psimeter-protocol.md) (with the rationale and decision log in
+> [`spec/RATIONALE.md`](spec/RATIONALE.md)); this repository contains the auditable cryptographic
+> core, a raw-entropy sidecar, and the surrounding skeleton.
 
 ## The one thing to understand first
 
@@ -21,12 +22,13 @@ have to trust whoever runs the server. Trust divides into two paths:
   on-screen "sigma" is display-only.
 
 Because the backend lives only in the integrity path, the choice of backend language
-carries no scientific risk. See [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md) §7–§8.
+carries no scientific risk. See [`spec/psimeter-protocol.md`](spec/psimeter-protocol.md) §3 (architecture & trust model).
 
 ## Repository layout
 
 ```
-docs/                 specification, protocol, pre-registration
+spec/                 normative protocol spec + rationale (decision log D1–D16) + test vectors
+docs/                 pointer to spec/ (legacy path)
 schema/               cross-language data contracts (core/src/types.ts is current SoT)
 packages/
   core/               TS, pure & I/O-free: commitments, Merkle, ledger, canonicalization

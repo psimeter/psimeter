@@ -15,10 +15,18 @@ at scale, on no budget. Be outcome-neutral and supportive; the rigor protects ag
 public artifacts without trusting anyone. This drives the entire cryptographic design.
 
 ## Authoritative docs — read first
-- `docs/SPECIFICATION.md` — the living spec. Key parts: design pillars (§2), glossary (§3),
-  **two hypotheses H1/H2 (§5)**, **decision log D1–D13 (§6)**, **provenance flow (§7, status in §7.6)**,
-  **architecture (§8)**, phasing (§9), **public website plan (§10)**. Keep it updated as decisions land.
-- Auto-loaded memory: project overview, owner-is-subject, Phase 2 website plan.
+The `spec/` directory is the single source of truth ([`spec/README.md`](spec/README.md) maps it out).
+- **[`spec/psimeter-protocol.md`](spec/psimeter-protocol.md)** — the **normative** spec (RFC-style,
+  stable `PSI-*` requirement IDs): canonicalization, primitives, experiment defs, pre-commitment/anchor,
+  beacon, ledger, generation, the two experiment kinds, scoring (incl. the psi e-value), the witness
+  protocol, and the verification procedure. Backed by machine-checked vectors in
+  [`spec/test-vectors/`](spec/test-vectors/), loaded by **both** the core test suite and
+  `python analysis/analyze.py --check-vectors` (the cross-language conformance gate).
+- **[`spec/RATIONALE.md`](spec/RATIONALE.md)** — informative: design pillars (§2), glossary (§3),
+  **two hypotheses H1/H2 (§5)**, **decision log D1–D16 (§6)**, provenance narrative (§7), architecture
+  (§8), phasing (§9), **public website plan (§10)**. The former `docs/SPECIFICATION.md` (now a pointer).
+  Its `§`-numbers are its own; on any conflict the protocol spec wins.
+- Keep the spec updated as decisions land. Auto-loaded memory: project overview, owner-is-subject, Phase 2 website plan.
 
 ## Status — Phase 0–1 COMPLETE (verified, committed)
 - **Methodology locked (D1–D13):** true-physical RNG; tripolar HIGH/LOW/BASELINE; fixed-N, no optional
@@ -75,7 +83,7 @@ Env knobs: `PSIMETER_ENTROPY=os|rdseed` · `PSIMETER_BEACON=drand|dev` · `PSIME
 - Commit only when asked; branch off `main` for non-trivial work; end commit messages with
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 
-## Phase 2 (next) — see SPECIFICATION.md §10
+## Phase 2 (next) — see `spec/RATIONALE.md` §10 (public website plan)
 **Public website** (rebuild `packages/client`): (1) About / how-it-works (skeptic-accessible, explains the
 cryptographic auditability); (2) Experiments browser with stats + per-experiment pages + **per-user history tied
 to the browser Ed25519 key**; (3) Leaderboard / aggregate view (honest, vs calibrated null); (4) **Gamified
