@@ -7,6 +7,7 @@
 | **Date** | 2026-06-21 |
 | **Editor** | Adler Oliveira |
 | **Conventions** | BCP 14 ([RFC 2119](https://www.rfc-editor.org/info/rfc2119), [RFC 8174](https://www.rfc-editor.org/info/rfc8174)) |
+| **License** | Specification text: CC BY 4.0 · reference code: MIT |
 
 > **Abstract.** PsiMeter is a platform for large-scale, anonymous, web-based experiments that
 > test for putative "psi" effects (intention-biased true randomness; forced-choice

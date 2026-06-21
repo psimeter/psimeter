@@ -69,3 +69,10 @@ The **scientific** claims — the hypotheses, the pre-registered analysis, the s
 deliberately *not* specified here; they belong in a pre-registration (e.g. OSF). This document
 governs the **protocol, data formats, cryptography, and verification** that make those claims
 auditable by anyone.
+
+## License
+
+The **specification text** in this directory (`*.md`) is licensed **CC BY 4.0** — anyone may build
+their own implementation and redistribute or adapt the spec with attribution, which is the point.
+The **reference code** in the repository remains **MIT**. The machine-readable test vectors
+(`test-vectors/`) are released as part of the specification.
