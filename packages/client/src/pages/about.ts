@@ -91,6 +91,7 @@ export function renderAbout(outlet: HTMLElement): void {
         el('div', { class: 'audience-hint' }, [
           el('span', {}, ['New here? Read on — this page is the plain-English tour.']),
           el('span', {}, ['Want the details, the studies, or to poke holes? → ', el('a', { href: '/faq', 'data-link': true }, 'the FAQ'), '.']),
+          el('span', {}, ['Want every decision, algorithm, and source — and to run it yourself? → ', el('a', { href: '/docs', 'data-link': true }, 'the docs'), '.']),
           el('span', {}, ['Want to seriously test your own ability? → ', el('a', { href: '/guide', 'data-link': true }, 'the guide'), '.']),
         ]),
       ]),
@@ -176,6 +177,10 @@ export function renderAbout(outlet: HTMLElement): void {
       // ---- go deeper -----------------------------------------------------
       el('h2', { class: 'about-h2' }, 'Go deeper'),
       el('div', { class: 'twocol' }, [
+        el('a', { class: 'card linkcard', href: '/docs', 'data-link': true }, [
+          el('h3', {}, 'The documentation wiki →'),
+          el('p', {}, 'The full technical deep-dive: every concept explained, every design decision justified, every algorithm motivated, with all the public sources — plus how to run the platform and verify the data yourself.'),
+        ]),
         el('a', { class: 'card linkcard', href: '/faq', 'data-link': true }, [
           el('h3', {}, 'The FAQ →'),
           el('p', {}, 'Straight answers about the system, the methodology in full, the psi score, and what the actual research does and doesn\'t show — with references.'),

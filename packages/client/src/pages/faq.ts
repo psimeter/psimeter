@@ -176,6 +176,8 @@ export function renderFaq(outlet: HTMLElement): void {
         el('p', { class: 'lede' }, [
           'Specifics about the system, the methodology, the psi score, and what the research actually shows. New here? The plain-English tour is ',
           el('a', { href: '/about', 'data-link': true }, 'About'),
+          '. For the full technical deep-dive — every decision, algorithm, and source, plus how to run it yourself — see ',
+          el('a', { href: '/docs', 'data-link': true }, 'the docs'),
           '; if you want to seriously test your own ability, read ',
           el('a', { href: '/guide', 'data-link': true }, 'the guide'),
           '.',

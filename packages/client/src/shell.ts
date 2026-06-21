@@ -16,6 +16,7 @@ const NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: '/experiments', label: 'Experiments' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/about', label: 'How it works' },
+  { href: '/docs', label: 'Docs' },
   { href: '/faq', label: 'FAQ' },
 ];
 
@@ -76,7 +77,10 @@ export function buildShell(): Shell {
 
   function setActive(path: string): void {
     for (const a of navLinks) {
-      a.classList.toggle('active', a.getAttribute('data-path') === path);
+      const target = a.getAttribute('data-path');
+      // The Docs link owns the whole /docs/* subtree; others match exactly.
+      const isActive = target === '/docs' ? path.startsWith('/docs') : target === path;
+      a.classList.toggle('active', isActive);
     }
     chip.classList.toggle('active', path === '/profile' || path === '/history');
   }

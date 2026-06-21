@@ -10,6 +10,7 @@ import { renderExperiments } from './pages/experiments';
 import { renderLeaderboard } from './pages/leaderboard';
 import { renderProfile } from './pages/profile';
 import { renderVerify } from './pages/verify';
+import { docsRoutes } from './pages/docs/index';
 
 const shell = buildShell();
 const app = document.getElementById('app');
@@ -27,6 +28,7 @@ const routes: Record<string, Route> = {
   '/profile': renderProfile,
   '/history': renderProfile, // legacy alias
   '/verify': renderVerify,
+  ...docsRoutes(), // the documentation wiki (/docs and /docs/*)
 };
 
 initRouter({

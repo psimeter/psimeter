@@ -129,6 +129,7 @@ export function renderGuide(outlet: HTMLElement): void {
         'Ready? Pick one experiment and start your run of sessions — your score is waiting at 0. ',
         el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run a session →'),
         el('a', { class: 'btn', href: '/faq', 'data-link': true, style: 'margin-left:10px' }, 'Read the FAQ'),
+        el('a', { class: 'btn', href: '/docs', 'data-link': true, style: 'margin-left:10px' }, 'Technical docs'),
       ]),
     ]),
   );
