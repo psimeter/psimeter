@@ -43,10 +43,10 @@
 - [Appendix A. Test vectors](#appendix-a-test-vectors)
 - [Appendix B. Design rationale](#appendix-b-design-rationale)
 
-> **Drafting status.** Sections 1–13, 16, and 17 are written. Sections 14–15 are present as scoped
-> stubs that name the source material, the implementing module, and the frozen golden vectors
-> they will formalize; they are being filled in section order. Nothing in a stub is normative
-> yet.
+> **Drafting status.** All sections (1–17) are written; the specification body is complete in draft
+> form. It remains version `0.1.0-draft` pending review. The test vectors (Appendix A) match the
+> reference implementation; wiring them in as the shared CI fixtures of `core` and `analyze.py` is
+> the remaining step. See the [README](README.md) for the versioning and conformance policy.
 
 ---
 
@@ -720,19 +720,76 @@ the co-signature on its own append-only, hash-chained feed.
 
 ## 14. Verification procedure
 
-> *Stub — to be written.* Will specify, as a normative algorithm, the auditor checks of legacy
-> §7.3: recompute each pre-commitment and anchor; verify operator and witness signatures and the
-> beacon BLS; walk the hash chain and check it against the external anchors; recompute Merkle
-> roots over raw blobs; re-derive per-trial targets and re-hash served stimulus bytes; and
-> recompute every score. This section defines what a conforming **Verifier** (§16) MUST do.
+This section defines, normatively, what a conforming **Verifier** (§16) does with a ledger and its
+referenced artifacts. Every check operates on public artifacts only and trusts neither the server nor
+this implementation. A verifier MUST perform every check that applies and MUST reject the corpus on
+any failure.
+
+- **[PSI-VERIFY-1] Canonical re-computation.** Every hashed or signed value is recomputed via PCJ
+  (§4) and the primitives (§5); a mismatch fails.
+- **[PSI-VERIFY-2] Chain integrity.** Verify the ledger chain (§9/PSI-LEDGER-4): `seq`, `prevHash`
+  linkage, and each recomputed `entryHash`, in order.
+- **[PSI-VERIFY-3] Pre-commitment & anchor.** For each session, recompute `experimentHash` from the
+  named definition (§6), recompute `precommit` from the PrecommitInput (§7) and the `anchor`, and
+  verify `operatorSig` against `operatorPubKey` over the precommit string (§7.3).
+- **[PSI-VERIFY-4] Freshness.** Confirm the bound beacon pulse against the public beacon archive and
+  BLS-verify it (§8); confirm the `session.open` precedes the `session.seal` in the chain.
+- **[PSI-VERIFY-5] Output commitment.** Recompute `rawSha256` and the Merkle `outputCommitment`
+  (using `leafBytes`, §10) from the raw blob; both MUST equal the sealed values, and for witnessed
+  micro-PK the seal root MUST be the Merkle continuation of the witnessed checkpoint prefixes (§13).
+- **[PSI-VERIFY-6] Per-trial (precognition).** For each trial, re-derive `{valence, imageIndex}` from
+  `B_R` (§11.2), confirm the shown image against the committed manifest and **re-hash the served
+  image bytes** against `imageSha256`, verify each `operatorSig`, and check
+  `targetRound > prevBeaconRound`; recompute the trial-list Merkle root.
+- **[PSI-VERIFY-7] Witnesses.** For witnessed sessions, recompute each `witnessStatement` (§13),
+  verify each `witnessSig`, enforce the per-kind timing rule (precognition `witnessRound <
+  targetRound`), and confirm the quorum of distinct trusted keys against the auditor's policy
+  (§13.3); cross-check the `witness.anchor` against the witness feed.
+- **[PSI-VERIFY-8] External anchors.** Confirm the ledger head against its `external.anchor` proofs
+  (RFC 3161 TSA / git / OpenTimestamps).
+- **[PSI-VERIFY-9] Scores.** Recompute every published statistic — the per-session display z and the
+  per-operator psi-score wealth (§12) — from the raw data and the integer counts. The authoritative
+  numbers are these recomputations, never the server's.
+
+The reference verifiers are [`analyze.py`](../analysis/analyze.py) (offline, standard library) and
+the in-browser `/verify` view; both implement these checks independently of the server.
 
 ## 15. Security considerations
 
-> *Stub — to be written.* Will port and formalize the honest residual-trust accounting of legacy
-> §7.4: the parallel-runs attack (micro-PK) and choice-timing/backdating (precognition) and how
-> witnesses close them; the remaining witness-independence frontier and the role of the external
-> time root at N=1; entropy-source integrity as a separate axis; and "published code == running
-> code". Per RFC convention this is a required section.
+Stating the residual trust openly is part of the credibility. The integrity path (§3.2) is verifiable
+by re-computation; the items below enumerate what remains and how it is bounded.
+
+- **Parallel runs (micro-PK) — closed by witnesses.** Without witnesses a malicious server could
+  privately roll several physical streams for one pre-committed session and seal only the favorable
+  one. Live witnesses co-sign the open, every checkpoint root, and the seal (§13), and the sealed
+  `outputCommitment` must continue the witnessed prefixes — so a privately-rolled alternate cannot be
+  substituted. What remains is **abandon-and-retry**, which is itself auditable: every witnessed open
+  with no seal appears in the witness feed, and each retry burns a fresh public beacon and open.
+- **Choice-timing / backdating (precognition) — closed by witnesses.** A witness co-signs each
+  forced-choice commit while its target round is still future (`witnessRound < targetRound`,
+  §13/§11.2), so the choice provably precedes the target.
+- **Witness independence — the honest frontier.** Witnesses help only insofar as they are independent
+  of the experimenter. Against a server colluding with *every* witness, only an M-of-N quorum of
+  genuinely independent witnesses helps (≤ N−M colluding). The protocol is M-of-N capable but the
+  reference deployment is N = 1. At N = 1 with the owner running the only node, the un-forgeable time
+  root is the **RFC 3161 TSA** (and OTS/Bitcoin long-term), not the node itself, so backdating is
+  bounded to TSA granularity even then. Un-witnessed sessions MUST NOT be pooled with witnessed
+  confirmatory data; strength scales with the number of independent peers running witnesses.
+- **Entropy-source integrity.** Whether the hardware is genuinely physical and unmanipulated is a
+  separate axis from the cryptographic chain. It is addressed by empirical baseline calibration,
+  continuous randomness test suites, and open/auditable hardware — not by this protocol's hashing.
+- **Published code == running code.** Verification assumes the published code is what ran. This is
+  mitigated by open source and reproducible build hashes; the strongest mitigation is *independent
+  implementations* (a verifier built from this specification) agreeing on the same public ledger —
+  which is the purpose of this document.
+- **Static-bias confound (micro-PK psi score).** A one-sided-intention operator could accrue e-value
+  from a biased source rather than psi (§12.2 caveat); mitigated by HIGH/LOW balance and by centering
+  the confirmatory analysis on the calibrated baseline and the HIGH−LOW contrast. Precognition is
+  unaffected (exact beacon-derived fair coin).
+- **Sybil / multi-key.** Minting many operator keys buys more lottery tickets for a high *screening*
+  score; this is answered by the confirmatory phase (and optional stronger identity for flagged
+  candidates), not on the open firehose, and the leaderboard shows the expected-by-chance candidate
+  count (§12.2/PSI-EVALUE-4).
 
 ---
 
