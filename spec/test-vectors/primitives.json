@@ -1,0 +1,55 @@
+{
+  "_about": "Normative known-answer vectors for section 5 (Cryptographic Primitives). `sha256` inputs are UTF-8 text; `merkle` leaves are raw byte strings given as hex. Note the Merkle root is emitted as a `sha256:` hash string (correcting the `merkle:` sketch in the legacy design doc). Loaded by packages/core tests and analysis/analyze.py.",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "5",
+  "requirements": [
+    "PSI-HASH-1",
+    "PSI-HASH-2",
+    "PSI-HASH-3",
+    "PSI-HASH-4",
+    "PSI-MERKLE-1",
+    "PSI-MERKLE-2",
+    "PSI-MERKLE-3",
+    "PSI-MERKLE-4",
+    "PSI-MERKLE-5"
+  ],
+  "sha256": [
+    {
+      "id": "empty",
+      "inputUtf8": "",
+      "output": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "abc",
+      "inputUtf8": "abc",
+      "output": "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    }
+  ],
+  "merkle": [
+    {
+      "id": "single",
+      "leavesHex": [
+        "01"
+      ],
+      "root": "sha256:b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2"
+    },
+    {
+      "id": "pair",
+      "leavesHex": [
+        "01",
+        "02"
+      ],
+      "root": "sha256:6bcf0e2e93e0a18e22789aee965e6553f4fbe93f0acfc4a705d691c8311c4965"
+    },
+    {
+      "id": "odd-promoted",
+      "leavesHex": [
+        "01",
+        "02",
+        "03"
+      ],
+      "root": "sha256:e2da0242936eb38ec996a543601b3a1da4226391ff92014ed1a7a248ace36347"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "_about": "Normative known-answer vectors for section 4 (Canonicalization). A conforming implementation MUST reproduce every `canonical` byte string from its `input`, and MUST reject every `reject` input. Loaded by packages/core tests and analysis/analyze.py.",
+  "spec": "psimeter-protocol",
+  "specVersion": "0.1.0-draft",
+  "section": "4",
+  "requirements": [
+    "PSI-CANON-1",
+    "PSI-CANON-2",
+    "PSI-CANON-3",
+    "PSI-CANON-4",
+    "PSI-CANON-5",
+    "PSI-CANON-6",
+    "PSI-CANON-7"
+  ],
+  "accept": [
+    {
+      "id": "key-order",
+      "input": {
+        "b": 1,
+        "a": 2
+      },
+      "canonical": "{\"a\":2,\"b\":1}"
+    },
+    {
+      "id": "nested",
+      "input": {
+        "z": {
+          "b": 1,
+          "a": 2
+        },
+        "a": [
+          3,
+          2,
+          1
+        ]
+      },
+      "canonical": "{\"a\":[3,2,1],\"z\":{\"a\":2,\"b\":1}}"
+    },
+    {
+      "id": "null-preserved",
+      "input": {
+        "a": 1,
+        "b": null
+      },
+      "canonical": "{\"a\":1,\"b\":null}"
+    },
+    {
+      "id": "scalar-types",
+      "input": {
+        "s": "x",
+        "t": true,
+        "f": false,
+        "n": null,
+        "i": -5,
+        "big": 9007199254740991
+      },
+      "canonical": "{\"big\":9007199254740991,\"f\":false,\"i\":-5,\"n\":null,\"s\":\"x\",\"t\":true}"
+    },
+    {
+      "id": "empty-containers",
+      "input": {
+        "arr": [],
+        "obj": {}
+      },
+      "canonical": "{\"arr\":[],\"obj\":{}}"
+    },
+    {
+      "id": "string-escaping",
+      "input": {
+        "esc": "\"\\\n\t\u0001/A"
+      },
+      "canonical": "{\"esc\":\"\\\"\\\\\\n\\t\\u0001/A\"}"
+    }
+  ],
+  "reject": [
+    {
+      "id": "non-integer-number",
+      "input": {
+        "x": 1.5
+      },
+      "reason": "PSI-CANON-3: only finite safe integers are permitted as numbers."
+    }
+  ]
+}
