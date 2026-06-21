@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import statistics
 import sys
 from pathlib import Path
@@ -271,6 +272,71 @@ def verify_operator_sig(pubkey: str, precommit: str, sig: str):
         return False
 
 
+# ---- live-witness verification (mirror of packages/core/src/witness.ts, spec D16) ----
+
+# Trusted witness keys are the AUDITOR's input, NOT the server's: set
+# PSYMETER_TRUSTED_WITNESSES to a comma-separated list of ed25519:<hex> keys you
+# independently know to be honest witnesses (published in the repo, like the drand
+# group key). When set, only these keys count toward a quorum; when unset, every
+# valid signature counts and the keys are printed so you can eyeball them.
+TRUSTED_WITNESSES = {k.strip() for k in os.environ.get("PSYMETER_TRUSTED_WITNESSES", "").split(",") if k.strip()}
+
+
+def witness_statement(subject_hash, session_id, kind, witness_round, witness_chain_hash, witness_pubkey, trial_index=None):
+    """Exact bytes a witness signs. trialIndex is omitted when None (canonicalize
+    drops it), so session-level and per-trial statements are distinct, unambiguous
+    forms — byte-identical to witnessStatement() in core."""
+    obj = {
+        "subjectHash": subject_hash, "sessionId": session_id, "kind": kind,
+        "witnessRound": witness_round, "witnessChainHash": witness_chain_hash,
+        "witnessPubKey": witness_pubkey,
+    }
+    if trial_index is not None:
+        obj["trialIndex"] = trial_index
+    return sha256_str(canonicalize(obj))
+
+
+def verify_attestations(attestations, subject_hash, session_id, kind, trial_index=None, target_round=None):
+    """Verify witness co-signatures over a subject (spec D16). Returns
+    (distinct_trusted_keys, sigs_state, timing_ok): the set of DISTINCT trusted
+    keys whose signature verified; sigs_state is False on any bad sig, None when
+    'cryptography' is unavailable, else True; timing_ok is False if any
+    witnessRound >= target_round (a precognition choice must precede its target)."""
+    distinct, saw_bad, have_check, timing_ok = set(), False, False, True
+    for a in attestations or []:
+        stmt = witness_statement(subject_hash, session_id, kind, a["witnessRound"],
+                                 a["witnessChainHash"], a["witnessPubKey"], trial_index)
+        sv = verify_operator_sig(a["witnessPubKey"], stmt, a["witnessSig"])
+        if sv is not None:
+            have_check = True
+            if sv and (not TRUSTED_WITNESSES or a["witnessPubKey"] in TRUSTED_WITNESSES):
+                distinct.add(a["witnessPubKey"])
+            elif sv is False:
+                saw_bad = True
+        if target_round is not None and a["witnessRound"] >= target_round:
+            timing_ok = False
+    return distinct, (None if not have_check else (False if saw_bad else True)), timing_ok
+
+
+def tsr_gentime(path: Path):
+    """Best-effort genTime from an RFC 3161 .tsr (a DER scan for the TSTInfo
+    GeneralizedTime). For DISPLAY only — full cryptographic validation is
+    `openssl ts -verify` (this code never trusts the token, spec D16/Q2)."""
+    try:
+        b = path.read_bytes()
+    except OSError:
+        return None
+    i = 0
+    while i < len(b) - 2:
+        if b[i] == 0x18:  # GeneralizedTime tag
+            ln = b[i + 1]
+            val = b[i + 2 : i + 2 + ln]
+            if 13 <= ln <= 23 and val[:2] in (b"20", b"19") and val[-1:] == b"Z":
+                return val.decode("ascii", "replace")
+        i += 1
+    return None
+
+
 def load_experiment_def(eid: str, version: int):
     path = EXPERIMENTS_DIR / f"{eid}-v{version}.json"
     # MUST be UTF-8 (not the platform default, which is cp1252 on Windows): a
@@ -344,9 +410,69 @@ def pearson(xs: list[float], ys: list[float]) -> float:
     return cov / (vx * vy) if vx and vy else 0.0
 
 
+def _micropk_witness(s: dict, leaves: list[bytes], open_hash: str):
+    """Witness verdict for a micro-PK seal (spec D16): checkpoint prefix-roots must
+    re-derive from the published blob, and the open/checkpoint/seal co-signatures
+    verify to a quorum. Returns (text, ok). Prefix-roots need no crypto; sigs do."""
+    if not s.get("witnessed"):
+        return "", True
+    cps = s.get("checkpoints", [])
+    roots_ok = all(merkle_root(leaves[:i + 1]) == cp.get("root") for i, cp in enumerate(cps))
+    if not _HAVE_ED25519:
+        return f", witnessed (checkpoint-roots {'ok' if roots_ok else 'BAD'}; sigs - install cryptography)", roots_ok
+    sid, w = s["sessionId"], s.get("witness", {})
+    threshold = w.get("threshold", 1)
+    od, osig, _ = verify_attestations(w.get("open", []), open_hash, sid, "open")
+    sd, ssig, _ = verify_attestations(w.get("seal", []), s["outputCommitment"], sid, "seal")
+    cp_keys, cp_bad = set(), False
+    for cp in cps:
+        d, sig, _ = verify_attestations(cp.get("witness", []), cp.get("root"), sid, "checkpoint")
+        cp_keys |= d
+        cp_bad = cp_bad or sig is False
+    distinct = od | sd | cp_keys
+    sig_bad = (osig is False) or (ssig is False) or cp_bad
+    quorum_ok = len(distinct) >= threshold
+    flags = ([] if roots_ok else ["checkpoint-roots BAD"]) + (["witness-sig BAD"] if sig_bad else []) + ([] if quorum_ok else ["QUORUM SHORT"])
+    txt = f", witnessed {len(distinct)}/{threshold} key(s)" + (" [" + ", ".join(flags) + "]" if flags else "")
+    return txt, roots_ok and not sig_bad and quorum_ok
+
+
+def _precog_witness(s: dict, recs: list[dict], op: dict, open_hash: str):
+    """Witness verdict for a presentiment seal (spec D16): every choice was
+    co-signed while its target round was still FUTURE (witnessRound < targetRound),
+    plus open/seal co-signatures, to a quorum. Returns (text, ok)."""
+    if not s.get("witnessed") and not any(r.get("witness") for r in recs):
+        return "", True
+    sid, pub = s["sessionId"], op.get("operatorPubKey", "")
+    timing_ok, distinct, sig_bad = True, set(), False
+    for r in recs:
+        tc = sha256_str(canonicalize({
+            "sessionId": sid, "trialIndex": r["trialIndex"], "choice": r["choice"],
+            "targetRound": r["targetRound"], "prevBeaconRound": r["prevBeaconRound"], "operatorPubKey": pub,
+        }))
+        d, sig, tok = verify_attestations(r.get("witness", []), tc, sid, "choice",
+                                          trial_index=r["trialIndex"], target_round=r["targetRound"])
+        distinct |= d
+        sig_bad = sig_bad or sig is False
+        timing_ok = timing_ok and tok
+    if not _HAVE_ED25519:
+        return f", witnessed (choice-timing {'ok' if timing_ok else 'BAD'}; sigs - install cryptography)", timing_ok
+    w = s.get("witness", {})
+    threshold = w.get("threshold", 1)
+    od, osig, _ = verify_attestations(w.get("open", []), open_hash, sid, "open")
+    sd, ssig, _ = verify_attestations(w.get("seal", []), s["outputCommitment"], sid, "seal")
+    distinct |= od | sd
+    sig_bad = sig_bad or osig is False or ssig is False
+    quorum_ok = len(distinct) >= threshold
+    flags = ([] if timing_ok else ["TIMING BAD (choice not before target)"]) + (["witness-sig BAD"] if sig_bad else []) + ([] if quorum_ok else ["QUORUM SHORT"])
+    txt = f", witnessed {len(distinct)}/{threshold} key(s)" + (" [" + ", ".join(flags) + "]" if flags else "")
+    return txt, timing_ok and not sig_bad and quorum_ok
+
+
 def verify_blob(ledger_dir: Path, s: dict, opens: dict) -> None:
-    """Re-verify a sealed session's raw blob against its recorded commitments.
-    Branches on kind by seal shape (micro-PK has leafBytes; precog has trials)."""
+    """Re-verify a sealed session's raw blob against its recorded commitments, and
+    (spec D16) re-verify every live-witness co-signature. Branches on kind by seal
+    shape (micro-PK has leafBytes; precog has trials)."""
     sid = s["sessionId"][:8]
     bp = ledger_dir / s["rawBlobRef"]
     if not bp.exists():
@@ -354,12 +480,14 @@ def verify_blob(ledger_dir: Path, s: dict, opens: dict) -> None:
         return
     data = bp.read_bytes()
     flat_ok = ("sha256:" + hashlib.sha256(data).hexdigest()) == s.get("rawSha256")
+    open_hash = opens.get(s["sessionId"], {}).get("entryHash", "")
 
     if "leafBytes" in s:  # micro-PK: Merkle over fixed byte windows
         leaves = [data[i:i + s["leafBytes"]] for i in range(0, len(data), s["leafBytes"])]
         merkle_ok = merkle_root(leaves) == s["outputCommitment"]
-        verdict = "OK" if (flat_ok and merkle_ok) else "MISMATCH"
-        print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'})")
+        wtxt, wok = _micropk_witness(s, leaves, open_hash)
+        verdict = "OK" if (flat_ok and merkle_ok and wok) else "MISMATCH"
+        print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'}{wtxt})")
         return
 
     # presentiment: blob is a canonical JSON array of trial records (spec §7.5).
@@ -405,9 +533,60 @@ def verify_blob(ledger_dir: Path, s: dict, opens: dict) -> None:
             if sv is False:
                 sig_state, trials_ok = "BAD", False
     sig_txt = sig_state if have_check else "-"
-    verdict = "OK" if (flat_ok and merkle_ok and trials_ok and pixels_ok) else "MISMATCH"
+    wtxt, wok = _precog_witness(s, recs, op, open_hash)
+    verdict = "OK" if (flat_ok and merkle_ok and trials_ok and pixels_ok and wok) else "MISMATCH"
     print(f"  {sid}  {verdict}  ({len(data)} bytes; sha256 {'ok' if flat_ok else 'BAD'}, merkle {'ok' if merkle_ok else 'BAD'}, "
-          f"{len(recs)} trials re-derived, pixels {'ok' if pixels_ok else 'BAD'}, sigs {sig_txt})")
+          f"{len(recs)} trials re-derived, pixels {'ok' if pixels_ok else 'BAD'}, sigs {sig_txt}{wtxt})")
+
+
+def verify_witness_feed(ledger_dir: Path, sealed_ids: set) -> None:
+    """Cross-check the INDEPENDENT witness feed (spec §7.4/D16), if present. The
+    feed is the witness's own append-only log — kept separately so the untrusted
+    server cannot silently drop an attestation. Re-verify its hash-chain and every
+    co-signature, and flag any session witnessed-open but never sealed (the
+    started-but-unsealed pattern). Point at it with PSYMETER_WITNESS_FEED, else we
+    look for ledger/witness-feed.jsonl beside the main ledger."""
+    feed_path = Path(os.environ.get("PSYMETER_WITNESS_FEED", str(ledger_dir / "witness-feed.jsonl")))
+    if not feed_path.exists():
+        return
+    entries = [json.loads(l) for l in feed_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    bad = verify_chain(entries)
+    attests = [e for e in entries if e["type"] == "witness.attest"]
+    print("\nwitness feed (independent log, spec D16):")
+    print(f"  {feed_path.name}: {len(entries)} entries, {len(attests)} attestation(s); "
+          f"chain {'OK' if bad < 0 else f'BROKEN at {bad}'}")
+    keys, bad_sig, opened = set(), 0, set()
+    for e in attests:
+        p = e["payload"]
+        stmt = witness_statement(p["subjectHash"], p["sessionId"], p["kind"], p["witnessRound"],
+                                 p["witnessChainHash"], p["witnessPubKey"], p.get("trialIndex"))
+        sv = verify_operator_sig(p["witnessPubKey"], stmt, p["witnessSig"])
+        if sv is True:
+            keys.add(p["witnessPubKey"])
+        elif sv is False:
+            bad_sig += 1
+        if p["kind"] == "open":
+            opened.add(p["sessionId"])
+    if _HAVE_ED25519:
+        print(f"  distinct witness keys (signature-verified): {len(keys)}" + (f"  BAD sigs: {bad_sig}" if bad_sig else ""))
+        for k in sorted(keys):
+            trust = "" if not TRUSTED_WITNESSES else ("  [trusted]" if k in TRUSTED_WITNESSES else "  [UNTRUSTED]")
+            print(f"    {k}{trust}")
+    else:
+        print("  (install 'cryptography' to verify witness signatures; the chain + timing are checked regardless)")
+    missing = opened - sealed_ids
+    if missing:
+        print(f"  WARNING: {len(missing)} session(s) witnessed-open but never sealed "
+              f"(started-but-unsealed pattern, spec 7.4): {sorted(d[:8] for d in missing)}")
+    stamps_path = ledger_dir / "witness-feed.stamps.jsonl"
+    if stamps_path.exists():
+        stamps = [json.loads(l) for l in stamps_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        print(f"  TSA stamps: {len(stamps)} (RFC 3161; full validation: openssl ts -verify on each .tsr)")
+        for st in stamps[-3:]:
+            tp = ledger_dir / st["tsr"]
+            print(f"    feedSeq {st['feedSeq']}  {st['tsr']}  genTime={tsr_gentime(tp) or 'unparsed'}")
+    else:
+        print("  (no TSA stamps yet - run the witness with PSYMETER_TSA_URL set for independent fine-grained time)")
 
 
 def main(path: str) -> int:
@@ -484,6 +663,10 @@ def main(path: str) -> int:
         print("\nraw-data verification (blob -> commitments):")
         for s in blob_seals:
             verify_blob(ledger_dir, s, opens)
+
+    # Independent witness feed cross-check (spec §7.4/D16): re-verify the witness's
+    # own log and flag any started-but-unsealed sessions.
+    verify_witness_feed(ledger_dir, {s["sessionId"] for s in seals})
 
     anchors = [e["payload"] for e in entries if e["type"] == "external.anchor"]
     if anchors:

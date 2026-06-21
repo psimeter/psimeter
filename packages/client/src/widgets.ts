@@ -29,6 +29,20 @@ export function shortKey(pubKey: string): string {
   return pubKey.replace(/^ed25519:/, '').slice(0, 10);
 }
 
+/** "independently witnessed" chip (spec §7.4 / D16). Inline-styled, self-contained. */
+export function witnessBadge(label = '✓ independently witnessed'): HTMLElement {
+  return el(
+    'span',
+    {
+      class: 'witness-pill',
+      title: 'Co-signed live by an independent witness, binding a fresh public-beacon round + RFC 3161 timestamp (spec §7.4 / D16).',
+      style:
+        'display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;color:#2fae8f;background:rgba(47,174,143,0.12);border:1px solid rgba(47,174,143,0.35)',
+    },
+    label,
+  );
+}
+
 // ---------- psi score (spec D15) ----------
 
 /** Odds against chance, from the test-martingale wealth (the e-value). */

@@ -5,9 +5,9 @@
 // WebSocket streams checkpoints and the final seal. The socket is receive-only —
 // nothing this client sends can reach the generator (pillar 5).
 
-import type { LedgerEntry, ExperimentDefinition, BeaconRef, PsiScore } from '@psymeter/core';
+import type { LedgerEntry, ExperimentDefinition, BeaconRef, PsiScore, WitnessAttestation } from '@psymeter/core';
 
-export type { PsiScore };
+export type { PsiScore, WitnessAttestation };
 
 /** Micro-PK intention (spec D3). A specific choice vocabulary; see `Choice`. */
 export type Intention = 'HIGH' | 'LOW' | 'BASELINE';
@@ -47,7 +47,7 @@ export interface CreatedSession {
   wsPath: string;
 }
 
-export interface Started { type: 'started'; tickMs: number; sessionSeconds: number; }
+export interface Started { type: 'started'; tickMs: number; sessionSeconds: number; witnessed?: boolean; }
 export interface Checkpoint { type: 'checkpoint'; trial: number; ones: number; total: number; zDisplay: number; root: string; }
 export interface Seal {
   type: 'seal';
@@ -59,6 +59,8 @@ export interface Seal {
   rawBlobRef: string;
   openEntryHash: string;
   sealEntryHash: string;
+  /** Co-signed live by an independent witness (spec D16). */
+  witnessed?: boolean;
 }
 export interface StreamError { type: 'error'; message: string; }
 export type StreamMessage = Started | Checkpoint | Seal | StreamError;
@@ -126,9 +128,11 @@ async function errorMessage(res: Response, fallback: string): Promise<string> {
 
 // ---------- precognition (presentiment) two-way stream (spec §7.5) ----------
 
-export interface PrecogStarted { type: 'started'; trialsPerSession: number; optionsPerTrial: number; sessionSeconds: number; beaconSource: string; }
+export interface PrecogStarted { type: 'started'; trialsPerSession: number; optionsPerTrial: number; sessionSeconds: number; beaconSource: string; witnessed?: boolean; }
 export interface PrecogTrial { type: 'trial'; trialIndex: number; }
 export interface PrecogPending { type: 'pending'; trialIndex: number; targetRound: number; prevBeaconRound: number; }
+/** Sent after the signed choice, while an independent witness co-signs it (D16). */
+export interface PrecogSensing { type: 'sensing'; trialIndex: number; }
 export interface PrecogReveal {
   type: 'reveal';
   trialIndex: number;
@@ -155,13 +159,16 @@ export interface PrecogSeal {
   rawBlobRef: string;
   openEntryHash: string;
   sealEntryHash: string;
+  /** Co-signed live by an independent witness (spec D16). */
+  witnessed?: boolean;
 }
-export type PrecogMessage = PrecogStarted | PrecogTrial | PrecogPending | PrecogReveal | PrecogSeal | StreamError;
+export type PrecogMessage = PrecogStarted | PrecogTrial | PrecogPending | PrecogSensing | PrecogReveal | PrecogSeal | StreamError;
 
 export interface PrecogHandlers {
   onStarted?: (m: PrecogStarted) => void;
   onTrial?: (m: PrecogTrial) => void;
   onPending?: (m: PrecogPending) => void;
+  onSensing?: (m: PrecogSensing) => void;
   onReveal?: (m: PrecogReveal) => void;
   onSeal?: (m: PrecogSeal) => void;
   onError?: (message: string) => void;
@@ -185,6 +192,7 @@ export function openPrecogStream(wsPath: string, handlers: PrecogHandlers): Prec
       case 'started': handlers.onStarted?.(m); break;
       case 'trial': handlers.onTrial?.(m); break;
       case 'pending': handlers.onPending?.(m); break;
+      case 'sensing': handlers.onSensing?.(m); break;
       case 'reveal': handlers.onReveal?.(m); break;
       case 'seal': handlers.onSeal?.(m); break;
       case 'error': handlers.onError?.(m.message); break;
@@ -229,6 +237,10 @@ export interface SealPayload {
   trials?: number;
   hits?: number;
   optionsPerTrial?: number;
+  // live witnesses (spec D16) — present only when witnessed:true
+  witnessed?: boolean;
+  witness?: { threshold: number; keys: string[]; open: WitnessAttestation[]; seal: WitnessAttestation[] };
+  checkpoints?: { trial: number; root: string; witness: WitnessAttestation[] }[];
 }
 
 export interface SessionSummary {
@@ -243,6 +255,8 @@ export interface SessionSummary {
   entropy: { id: string; confirmatory: boolean };
   ts: string;
   sealed: boolean;
+  /** Co-signed live by an independent witness (spec D16). */
+  witnessed: boolean;
   /** Micro-PK volume (bits); null for kinds without a bit stream. */
   nSamples: number | null;
   /** Precognition volume; null for kinds without forced-choice trials. */

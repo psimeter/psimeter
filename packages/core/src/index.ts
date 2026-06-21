@@ -16,3 +16,4 @@ export * from './scoring.js';
 export * from './psi.js';
 export * from './kinds.js';
 export * from './precog.js';
+export * from './witness.js';

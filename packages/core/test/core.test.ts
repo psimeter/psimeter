@@ -21,9 +21,12 @@ import {
   psiScore,
   psiScoreFromSessions,
   invNormalCdf,
+  witnessStatement,
+  witnessQuorum,
   type ExperimentDefinition,
   type PrecommitInput,
   type LedgerEntry,
+  type WitnessAttestation,
 } from '../src/index.js';
 
 // ---------- canonicalize ----------
@@ -280,4 +283,68 @@ test('psiScoreFromSessions drops BASELINE/unsealed and orients HIGH/LOW', () => 
 test('invNormalCdf inverts the standard normal at known points', () => {
   assert.ok(Math.abs(invNormalCdf(0.5)) < 1e-9);
   assert.ok(Math.abs(invNormalCdf(0.975) - 1.959963985) < 1e-6);
+});
+
+// ---------- live witnesses (spec §7.4 / D16) ----------
+
+test('witnessStatement is order-independent and omits an absent trialIndex', () => {
+  // The canonical bytes a witness signs; trialIndex is dropped when undefined so
+  // session-level and per-trial statements are distinct, unambiguous forms.
+  const sessionLevel = witnessStatement({
+    subjectHash: 'sha256:aa', sessionId: 's1', kind: 'seal',
+    witnessRound: 100, witnessChainHash: 'cc', witnessPubKey: 'ed25519:ww',
+  });
+  const withUndefined = witnessStatement({
+    subjectHash: 'sha256:aa', sessionId: 's1', trialIndex: undefined, kind: 'seal',
+    witnessRound: 100, witnessChainHash: 'cc', witnessPubKey: 'ed25519:ww',
+  } as Parameters<typeof witnessStatement>[0]);
+  assert.equal(sessionLevel, withUndefined);
+  // Including trialIndex MUST change the statement (per-trial precognition choice).
+  const perTrial = witnessStatement({
+    subjectHash: 'sha256:aa', sessionId: 's1', trialIndex: 0, kind: 'choice',
+    witnessRound: 100, witnessChainHash: 'cc', witnessPubKey: 'ed25519:ww',
+  });
+  assert.notEqual(sessionLevel, perTrial);
+});
+
+// Frozen golden vector (cross-language parity): analyze.py + browser /verify must
+// reproduce these exactly. If either changes, the canonical form drifted and no
+// witnessed session would verify across languages.
+test('witnessStatement matches the frozen golden vectors', () => {
+  assert.equal(
+    witnessStatement({
+      subjectHash: 'sha256:6ecdfac93181f0112e2654a3cec7c7cb65fc700318937a4350824d649f7d2e81',
+      sessionId: 's1', trialIndex: 0, kind: 'choice',
+      witnessRound: 100, witnessChainHash: '52db9ba70e0cc0f6', witnessPubKey: 'ed25519:abc',
+    }),
+    'sha256:b10ab2c2e99f076fcd456f28ede6f8ed5cc7020c7f6ece2ff8c572721fcad85f',
+  );
+  assert.equal(
+    witnessStatement({
+      subjectHash: 'sha256:deadbeef', sessionId: 's1', kind: 'checkpoint',
+      witnessRound: 42, witnessChainHash: '52db9ba70e0cc0f6', witnessPubKey: 'ed25519:abc',
+    }),
+    'sha256:283ffbcceffca9aac528dd5eed6f0dc52b91d8a9a4b00d6e1731c0442ec96ebd',
+  );
+});
+
+test('witnessQuorum counts DISTINCT trusted keys against the threshold (M of N)', () => {
+  const w1 = 'ed25519:w1', w2 = 'ed25519:w2', untrusted = 'ed25519:evil';
+  const att = (pk: string): WitnessAttestation => ({
+    witnessPubKey: pk, witnessRound: 1, witnessChainHash: 'cc', witnessSig: 'ed25519:sig',
+  });
+  const policy = { trustedKeys: [w1, w2], threshold: 2 };
+
+  // Two distinct trusted witnesses → quorum met.
+  assert.equal(witnessQuorum([att(w1), att(w2)], policy).ok, true);
+  // Duplicate of the same trusted key does NOT count twice.
+  const dup = witnessQuorum([att(w1), att(w1)], policy);
+  assert.equal(dup.ok, false);
+  assert.equal(dup.distinctTrusted, 1);
+  // An untrusted (e.g. server-run) key is ignored entirely.
+  assert.equal(witnessQuorum([att(w1), att(untrusted)], policy).distinctTrusted, 1);
+  // N=1/M=1 deployment: a single trusted witness satisfies threshold 1.
+  assert.equal(witnessQuorum([att(w1)], { trustedKeys: [w1], threshold: 1 }).ok, true);
+  // A zero/negative threshold is rejected (no silent "0 witnesses ok").
+  assert.equal(witnessQuorum([att(w1)], { trustedKeys: [w1], threshold: 0 }).ok, false);
 });

@@ -8,6 +8,7 @@
   "workspaces": [
     "packages/core",
     "packages/server",
+    "packages/witness",
     "packages/client"
   ],
   "scripts": {
@@ -18,7 +19,10 @@
     "typecheck:client": "npm --workspace @psymeter/client run typecheck",
     "dev:client": "npm --workspace @psymeter/client run dev",
     "start": "npm --workspace @psymeter/server run start",
+    "witness": "npm --workspace @psymeter/witness run start",
     "smoke": "npm --workspace @psymeter/server run smoke",
-    "anchor": "npm --workspace @psymeter/server run anchor"
+    "smoke:witness": "npm --workspace @psymeter/server run smoke:witness",
+    "anchor": "npm --workspace @psymeter/server run anchor",
+    "purge": "node scripts/purge-ledger.mjs"
   }
 }

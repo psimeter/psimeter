@@ -6,7 +6,7 @@ import { el } from '../ui';
 import type { Disposer } from '../router';
 import { fetchSessionDetail, type SessionDetail, type OpenPayload, type SealPayload } from '../api';
 import { verifySession, type Check } from '../verify';
-import { loading, errorBox } from '../widgets';
+import { loading, errorBox, witnessBadge } from '../widgets';
 
 export function renderVerify(outlet: HTMLElement, query: URLSearchParams): Disposer {
   let disposed = false;
@@ -57,6 +57,7 @@ function render(detail: SessionDetail, checks: Check[]): HTMLElement[] {
       el('div', { class: 'dim', style: 'font-size:13px' }, allOk
         ? 'Every check below was recomputed locally with @psymeter/core — the server was not trusted for any of it.'
         : 'One or more checks did not match; this record may be inconsistent.'),
+      s?.witnessed ? el('div', { style: 'margin-top:8px' }, witnessBadge()) : false,
     ]),
   ]);
 

@@ -13,6 +13,7 @@
 import { el } from '../../ui';
 import type { Disposer } from '../../router';
 import { getOperatorPubKey, signPrecommit } from '../../identity';
+import { witnessBadge } from '../../widgets';
 import { trialCommit, hitRateZ } from '@psymeter/core';
 import {
   createSession,
@@ -44,6 +45,7 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
   let trialsPerSession = Number((info.params as Record<string, number>).trialsPerSession ?? 0);
   let revealUntil = 0;
   let revealTimer: number | undefined;
+  let witnessed = false;
 
   function teardown(): void {
     socket?.close();
@@ -118,6 +120,7 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
 
     const progress = el('span', { class: 'v tnum' }, `0 / ${trialsPerSession}`);
     const hitsVal = el('span', { class: 'v tnum' }, '0');
+    const liveDot = el('span', { class: 'live-dot' }, 'committed before reveal');
     const stage = el('div', { class: 'precog-stage' });
 
     inner.replaceChildren(
@@ -125,7 +128,7 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
         el('div', { class: 'hud' }, [
           hudItem('trial', progress),
           hudItem('hits', hitsVal),
-          el('span', { class: 'live-dot' }, 'committed before reveal'),
+          liveDot,
         ]),
         stage,
         el('div', { class: 'viz-caption' }, `anchor ${anchor} · the image is fixed by a future public beacon · display only`),
@@ -133,7 +136,12 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
     );
 
     socket = openPrecogStream(wsPath, {
-      onStarted: (m) => { trialsPerSession = m.trialsPerSession; progress.textContent = `0 / ${m.trialsPerSession}`; },
+      onStarted: (m) => {
+        trialsPerSession = m.trialsPerSession;
+        progress.textContent = `0 / ${m.trialsPerSession}`;
+        witnessed = m.witnessed ?? false;
+        if (witnessed) liveDot.textContent = 'witnessed · committed before reveal';
+      },
       // Hold the previous reveal on screen for revealHoldMs before the next choice.
       onTrial: (m) => {
         const delay = Math.max(0, revealUntil - Date.now());
@@ -141,6 +149,8 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
         revealTimer = window.setTimeout(() => showChoice(stage, m.trialIndex), delay);
       },
       onPending: (m) => { void onPending(stage, m.trialIndex, m.targetRound, m.prevBeaconRound); },
+      // Witness co-signing the choice before its target round — mask the wait.
+      onSensing: () => showSensing(stage),
       onReveal: (m) => { showReveal(stage, m); revealUntil = Date.now() + revealHoldMs; hitsVal.textContent = String(m.hits); progress.textContent = `${m.completed} / ${m.trialsPerSession}`; },
       onSeal: (m) => showSeal(anchor, m),
       onError: (message) => showSetup(`Session error: ${message}`),
@@ -183,6 +193,16 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
     socket?.sendSign(trialIndex, sig);
   }
 
+  // While an independent witness co-signs the choice before its target round
+  // publishes (spec D16) — masks the synchronous witnessing + beacon wait.
+  function showSensing(stage: HTMLElement): void {
+    stage.replaceChildren(el('div', { class: 'precog-waiting' }, [
+      el('div', { class: 'pulse-ring' }),
+      el('div', {}, 'An independent witness is sealing your choice…'),
+      el('div', { class: 'fineprint' }, 'co-signed to a fresh public beacon round before the image is chosen — so it can never be back-fitted'),
+    ]));
+  }
+
   function showReveal(stage: HTMLElement, m: PrecogReveal): void {
     const meta = VALENCE_META[m.targetChoice] ?? { label: m.targetChoice, glyph: '?', color: '#6ea8fe' };
     const hit = m.hit === 1;
@@ -205,6 +225,7 @@ export function renderPrecogRunner(outlet: HTMLElement, info: ExperimentInfo): D
     inner.replaceChildren(
       el('div', { class: 'seal card' }, [
         el('span', { class: 'eyebrow' }, 'Sealed'),
+        m.witnessed ? el('div', { style: 'margin:6px 0' }, witnessBadge()) : false,
         el('h2', {}, `${m.hits} / ${m.trials} hits`),
         el('p', { class: 'seal-sub' }, `${rate}% this session · chance is ${(100 / m.optionsPerTrial).toFixed(0)}% · z (display) ${z >= 0 ? '+' : ''}${z.toFixed(2)}`),
         el('dl', {}, [

@@ -123,14 +123,18 @@ function hexToBytes(hex: string): Uint8Array {
  *
  * It simulates an advancing round clock so the precognition flow (which binds a
  * *future* round and waits for it) is testable without network access: round =
- * floor((now − genesis) / period), and each round's value is a deterministic
- * hash of its number (so /verify and analyze.py can reproduce derived targets).
+ * floor(now / period), and each round's value is a deterministic hash of its
+ * number (so /verify and analyze.py can reproduce derived targets).
+ *
+ * The epoch is FIXED at 0 (wall-clock), NOT process start, so an INDEPENDENT
+ * witness process (packages/witness) computes the identical round number — its
+ * `witnessRound < targetRound` check is meaningless if the two disagree (D16).
  */
 export class DevBeacon implements BeaconProvider {
   readonly id = 'dev';
   readonly periodSeconds: number;
   private readonly periodMs: number;
-  private readonly genesisMs = Date.now();
+  private readonly genesisMs = 0;
 
   constructor() {
     // Fast rounds under PSYMETER_FAST so a full precog session runs in seconds.

@@ -61,6 +61,8 @@ export interface SessionSummary {
   entropy: { id: string; confirmatory: boolean };
   ts: string;
   sealed: boolean;
+  /** Co-signed live by an independent witness (spec D16); false for pre-D16 / unwitnessed. */
+  witnessed: boolean;
   /** Micro-PK volume (bits); null for kinds that don't produce a bit stream. */
   nSamples: number | null;
   /** Precognition volume; null for kinds without forced-choice trials. */
@@ -139,6 +141,7 @@ function toSummary(j: Joined): SessionSummary {
     entropy: { id: o.entropySource.id, confirmatory: o.entropySource.confirmatory },
     ts: j.seal ? j.seal.ts : j.open.ts,
     sealed: s !== null,
+    witnessed: s ? s.witnessed === true : false,
     nSamples: s ? num(s.nSamples) : null,
     trials: s ? num(s.trials) : null,
     hits: s ? num(s.hits) : null,

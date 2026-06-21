@@ -13,6 +13,7 @@
 import { el, fmtInt } from '../../ui';
 import type { Disposer } from '../../router';
 import { getOperatorPubKey, signPrecommit } from '../../identity';
+import { witnessBadge } from '../../widgets';
 import {
   createSession,
   submitSignature,
@@ -204,6 +205,7 @@ export function renderMicroPkRunner(outlet: HTMLElement, info: ExperimentInfo): 
     inner.replaceChildren(
       el('div', { class: 'seal card' }, [
         el('span', { class: 'eyebrow' }, 'Sealed'),
+        seal.witnessed ? el('div', { style: 'margin:6px 0' }, witnessBadge()) : false,
         el('h2', {}, 'Session sealed'),
         el('p', { class: 'seal-sub' }, 'Your run is now permanently recorded — it can’t be changed or removed.'),
         dl,

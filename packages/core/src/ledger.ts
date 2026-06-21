@@ -6,7 +6,13 @@ export type LedgerEntryType =
   | 'session.open'
   | 'session.seal'
   | 'baseline.seal'
-  | 'external.anchor';
+  | 'external.anchor'
+  /** Cross-binds the independent witness feed's head (+ its TSA/OTS refs) into
+   * the main chain so a skeptic can tie the two append-only logs together (D16). */
+  | 'witness.anchor'
+  /** One co-signature in a WITNESS's own append-only feed (a sibling hash-chained
+   * log, verified by the same machinery). Never appears in the main ledger. */
+  | 'witness.attest';
 
 /** One immutable, hash-chained ledger entry (spec §8.5). */
 export interface LedgerEntry {

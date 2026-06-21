@@ -20,9 +20,12 @@ import {
   derivePresentimentTarget,
   trialCommit,
   choiceVocabulary,
+  witnessStatement,
 } from '@psymeter/core';
 import * as ed from '@noble/ed25519';
-import type { OpenPayload, SealPayload, SessionDetail } from './api';
+import type { OpenPayload, SealPayload, SessionDetail, WitnessAttestation } from './api';
+
+type WitnessSubjectKind = 'open' | 'checkpoint' | 'choice' | 'seal';
 
 export interface Check {
   label: string;
@@ -86,10 +89,68 @@ export async function verifySession(detail: SessionDetail): Promise<Check[]> {
     // is re-derived from that round's public randomness (spec §7.5).
     if (typeof s.trials === 'number') {
       await verifyPrecogTrials(checks, o, s, experiment);
+    } else if (s.witnessed) {
+      // micro-PK: re-check the independent witness co-signatures (spec D16).
+      await verifyMicroPkWitness(checks, o, s);
     }
   }
 
   return checks;
+}
+
+/**
+ * Verify a list of witness co-signatures over one subject (spec D16): each
+ * attestation's Ed25519 signature over the recomputed witnessStatement, plus the
+ * choice-before-target timing when a targetRound is given. Returns the distinct
+ * keys that verified, so the caller can count an M-of-N quorum.
+ */
+async function verifyAttestations(
+  attestations: WitnessAttestation[] | undefined,
+  subjectHash: string,
+  sessionId: string,
+  kind: WitnessSubjectKind,
+  trialIndex?: number,
+  targetRound?: number,
+): Promise<{ distinct: Set<string>; sigsOk: boolean; timingOk: boolean }> {
+  const distinct = new Set<string>();
+  let sigsOk = true;
+  let timingOk = true;
+  for (const a of attestations ?? []) {
+    const stmt = witnessStatement({
+      subjectHash, sessionId, trialIndex, kind,
+      witnessRound: a.witnessRound, witnessChainHash: a.witnessChainHash, witnessPubKey: a.witnessPubKey,
+    });
+    if (await verifySignature(a.witnessPubKey, stmt, a.witnessSig)) distinct.add(a.witnessPubKey);
+    else sigsOk = false;
+    if (typeof targetRound === 'number' && a.witnessRound >= targetRound) timingOk = false;
+  }
+  return { distinct, sigsOk, timingOk };
+}
+
+async function verifyMicroPkWitness(checks: Check[], o: OpenPayload, s: SealPayload): Promise<void> {
+  const w = s.witness;
+  const openRes = await verifyAttestations(w?.open, s.openEntryHash, o.sessionId, 'open');
+  const sealRes = await verifyAttestations(w?.seal, s.outputCommitment, o.sessionId, 'seal');
+  const cpKeys = new Set<string>();
+  let cpSigsOk = true;
+  const cps = s.checkpoints ?? [];
+  for (const cp of cps) {
+    const r = await verifyAttestations(cp.witness, cp.root, o.sessionId, 'checkpoint');
+    if (!r.sigsOk) cpSigsOk = false;
+    r.distinct.forEach((k) => cpKeys.add(k));
+  }
+  const distinct = new Set<string>([...openRes.distinct, ...sealRes.distinct, ...cpKeys]);
+  const threshold = w?.threshold ?? 1;
+  checks.push({
+    label: `Independent witness co-signed the session start, all ${cps.length} live checkpoints, and the seal`,
+    ok: cpSigsOk && openRes.sigsOk && sealRes.sigsOk && cps.length > 0 && openRes.distinct.size > 0 && sealRes.distinct.size > 0,
+    note: 'that these checkpoint roots are the real raw-stream prefixes is re-checked from the blob in analysis/analyze.py',
+  });
+  checks.push({
+    label: `At least ${threshold} independent witness(es) co-signed (quorum)`,
+    ok: distinct.size >= threshold,
+    note: `${distinct.size} distinct witness key(s)`,
+  });
 }
 
 interface TrialRecord {
@@ -104,6 +165,7 @@ interface TrialRecord {
   imageSha256: string;
   hit: number;
   operatorSig: string;
+  witness?: WitnessAttestation[];
 }
 
 interface Stimulus { path: string; sha256: string; }
@@ -136,6 +198,11 @@ async function verifyPrecogTrials(
   let futureOk = true;
   let derivedOk = true; // valence + selected image re-derive from the beacon
   let hitsOk = true;
+  // Live-witness accumulation (spec D16): each choice co-signed before its target.
+  let witnessSigsOk = true;
+  let witnessTimingOk = true;
+  let witnessedTrials = 0;
+  const witnessKeys = new Set<string>();
 
   for (const r of records) {
     merkle.add(new TextEncoder().encode(canonicalize(r)));
@@ -148,6 +215,13 @@ async function verifyPrecogTrials(
       operatorPubKey: o.operatorPubKey,
     });
     if (!(await verifySignature(o.operatorPubKey, tc, r.operatorSig))) sigsOk = false;
+    if (r.witness?.length) {
+      witnessedTrials += 1;
+      const wr = await verifyAttestations(r.witness, tc, o.sessionId, 'choice', r.trialIndex, r.targetRound);
+      if (!wr.sigsOk) witnessSigsOk = false;
+      if (!wr.timingOk) witnessTimingOk = false;
+      wr.distinct.forEach((k) => witnessKeys.add(k));
+    }
     if (r.targetRound <= r.prevBeaconRound) futureOk = false;
     if (haveCorpus) {
       const t = derivePresentimentTarget(r.beaconValue, r.trialIndex, pools[0]!.length, pools[1]!.length);
@@ -181,6 +255,29 @@ async function verifyPrecogTrials(
   checks.push({ label: 'Recorded hits match prediction vs revealed valence', ok: hitsOk });
   checks.push({ label: 'Trial records reproduce the sealed Merkle root', ok: merkle.root() === s.outputCommitment, note: s.outputCommitment });
   checks.push({ label: 'Raw blob matches its recorded SHA-256', ok: sha256(bytes) === s.rawSha256 });
+
+  // Live witnesses (spec D16): the choice-timing residual is closed when an
+  // independent witness co-signed each choice before its target round published.
+  if (s.witnessed || witnessedTrials > 0) {
+    const openRes = await verifyAttestations(s.witness?.open, s.openEntryHash, o.sessionId, 'open');
+    const sealRes = await verifyAttestations(s.witness?.seal, s.outputCommitment, o.sessionId, 'seal');
+    const keys = new Set<string>([...witnessKeys, ...openRes.distinct, ...sealRes.distinct]);
+    const threshold = s.witness?.threshold ?? 1;
+    checks.push({
+      label: `All ${witnessedTrials} choices were co-signed by an independent witness`,
+      ok: witnessSigsOk && witnessedTrials === records.length && witnessedTrials > 0,
+    });
+    checks.push({
+      label: 'Each choice was witnessed while its target round was still in the future',
+      ok: witnessTimingOk,
+      note: 'witnessRound < targetRound — the choice provably preceded its target (closes backdating)',
+    });
+    checks.push({
+      label: `At least ${threshold} independent witness(es) co-signed (quorum)`,
+      ok: keys.size >= threshold,
+      note: `${keys.size} distinct witness key(s)`,
+    });
+  }
 }
 
 async function verifySignature(pubKey: string, precommit: string, sig: string): Promise<boolean> {

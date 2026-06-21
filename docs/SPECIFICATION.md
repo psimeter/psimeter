@@ -197,6 +197,19 @@ The leaderboard's unit is the **person, not the session.** Anomalous single sess
 
 **Opt-in candidate contact.** Crossing the threshold unlocks a voluntary form: the operator **signs a canonical challenge** (proving custody of the key whose public score earned eligibility), the server re-derives eligibility from the ledger, and the chosen contact detail is stored in a **private, off-ledger** log (git-ignored, never on the public chain, never returned by any GET). This is the single, deliberate, operator-initiated break in pseudonymity (everything else stays anonymous).
 
+### D16 — Live witnesses: closing the parallel-runs & choice-timing residuals `DECIDED`
+Two attacks survived the §7.4 accounting because the experiment server *alone* produced every artifact: (1) **parallel runs** (micro-PK) — privately roll several physical streams for one pre-committed session and seal only the flattering one; (2) **choice-timing / backdating** (precognition, §7.5) — lie about *when* a forced choice arrived, so it no longer provably precedes its target beacon round. Both are closed by **independent live witnesses** that co-sign artifacts in real time.
+
+**Witness model — M-of-N capable, deployed at N=1.** A *witness* is an independent process (its own Ed25519 key, host, ideally operator) that co-signs a subject and publishes it to its **own** append-only, hash-chained feed. Verifiers (`analyze.py` and `/verify`) count **≥ M of N trusted witnesses** — the trusted set is the *auditor's* published list (like the hardcoded drand group key), never the server's say-so. The protocol + verifiers are M-of-N from day one, deployed at **N=1/M=1** (one node, runnable by anyone from the open-source repo via `npm run witness`); adding federated peers is config, not code. *Honest limit:* a single witness the experimenter also runs is not independence on its own — which is exactly why the time anchor is externally rooted (below).
+
+**Trusted time — drand round (per attestation) + RFC 3161 TSA (feed head) + OTS/Bitcoin (long-term).** Each attestation binds a drand round the witness fetched and **BLS-verified itself**; `witnessRound < targetRound` is the publicly re-checkable timing fact for precognition. The witness periodically stamps its feed head with a **free, configurable RFC 3161 TSA** — an independent party whose timestamp the experimenter cannot forge, so even a single owner-run witness is un-backdatable to TSA granularity. OTS/Bitcoin (via the main ledger's `witness.anchor` + `npm run anchor`) freezes the feed long-term. In-code verification re-checks the witness **Ed25519 signature + the drand-round ordering + the TSA token's messageImprint/genTime** (a DER walk); full TSA-token cryptographic validation is one standard command (`openssl ts -verify`), mirroring how we emit `.ots` for `ots verify`.
+
+**What is witnessed.** *Micro-PK:* the session **open**, **every live checkpoint root**, and the **seal** — and the sealed `outputCommitment` must be the Merkle continuation of the witnessed checkpoint prefixes (recomputable from the published raw blob), so a privately-rolled alternate stream cannot be substituted at seal. *Precognition:* **each forced-choice commit, synchronously, before its target round** (the witness refuses if the target is already public), plus the open and seal. Per-trial synchronous co-signing adds a little latency, masked in the UI by a "sensing" reveal animation.
+
+**How it binds in — additive only, no committed-field break.** An attestation is `{witnessPubKey, witnessRound, witnessChainHash, witnessSig, feedSeq, feedEntryHash}` over the canonical `witnessStatement{subjectHash, sessionId, trialIndex?, kind, witnessRound, witnessChainHash, witnessPubKey}` (`packages/core/src/witness.ts`, with a frozen golden vector). Attestations are stored as **new optional fields** on the seal (`witnessed`, `witness.{threshold,keys,open,seal}`, and micro-PK `checkpoints[]`) and on each precognition trial record (`witness[]`); `PrecommitInput`/`buildPrecommit`, `experimentHash`, `trialCommit`, and `derivePresentimentTarget` are **unchanged**, so every previously sealed session still verifies byte-for-byte and an un-witnessed seal is byte-identical to the pre-D16 format. The witness feed is a *sibling* hash-chained log (`witness.attest` entries) verified by the same core machinery; the main ledger cross-references the witness feed head via a `witness.anchor` entry.
+
+**Configuration & honesty.** Witnessing is opt-in via `PSYMETER_WITNESS=url[,url]` + `PSYMETER_WITNESS_THRESHOLD`; unset → sessions seal `witnessed:false` (the old behavior) and are **never pooled** with witnessed confirmatory data. For confirmatory use the trusted witness key-set + threshold should migrate into the **hash-bound experiment definition** (D13), like the psi grid (D15). The reference node is `packages/witness`.
+
 ---
 
 ## 7. Provenance & verification flow
@@ -257,7 +270,9 @@ sequenceDiagram
 
 ### 7.4 Honest residual-trust accounting
 *Stating these openly is itself part of the credibility.*
-- **The "parallel runs" attack.** A malicious server could in principle run several physical streams at once and seal only the favorable one. This is **bounded** (every *started* session is pre-committed to the public chain, so hidden runs have no public existence and a pattern of started-but-unsealed sessions is itself detectable; beacon binding caps the window), but not **eliminated** in v1. Full elimination needs independent **live witnesses** that co-sign checkpoints in real time → designed for Phase 3 (witness servers / public checkpoint feed). v1 ships client-side checkpoint logging as a lightweight stand-in.
+- **The "parallel runs" attack (micro-PK) — CLOSED by live witnesses (D16).** A malicious server could in principle roll several physical streams for one pre-committed session and seal only the favorable one. An independent witness now co-signs the **open, every live checkpoint root, and the seal** in real time (binding a fresh self-verified drand round), and the sealed `outputCommitment` must be the Merkle continuation of the witnessed prefixes — so a privately-cherry-picked stream cannot be substituted. What remains is **abandon-and-retry**, now concretely auditable: every witnessed open with no seal shows in the independent witness feed (a started-but-unsealed pattern), and each retry burns a fresh public beacon + open.
+- **Choice-timing / backdating (precognition) — CLOSED by live witnesses (D16, §7.5).** An independent witness co-signs each forced-choice commit while its target round is still in the future (`witnessRound < targetRound`; the witness refuses otherwise), so the choice provably precedes the target.
+- **NEW residual — witness independence.** Witnesses help only to the degree they are independent of the experimenter. Against a server colluding with *every* witness, only an **M-of-N quorum of genuinely independent witnesses** (≤ N−M colluding) helps; the protocol is M-of-N from day one but is deployed at **N=1** today. At N=1 with the owner running the only node, the un-forgeable time root is the **RFC 3161 TSA** (and OTS/Bitcoin long-term), *not* the node itself — so backdating is bounded to TSA granularity even then. Sessions with no co-signature are flagged `witnessed:false` and never pooled with witnessed confirmatory data. *This is the honest frontier: strength scales with independent peers + the TSA, and the README invites anyone to run a witness.*
 - **Entropy-source integrity** (is the hardware genuinely physical and unmanipulated?) is a separate axis, handled by D5 calibration, the continuous randomness test suites, and open/auditable hardware.
 - **Published code == running code.** Mitigated by open source + reproducible build hashes; hardened later with remote attestation (Phase 3).
 
@@ -272,7 +287,7 @@ Per-trial sequence (`packages/server/src/kinds/precog.ts`), two-way WebSocket:
 3. server → `pending {R, R0}`; the client signs `commitHash{sessionId, trialIndex, choice, R, R0, operatorPubKey}` (Ed25519) and returns it.
 4. server waits for `R`, **BLS-verifies** `B_R`, derives `{valence, imageIndex}` via `derivePresentimentTarget` (`valence = SHA256(B_R ‖ uint32(trialIndex))[0] & 1` — an exact fair coin; image index from a disjoint digest slice mod the pool size), selects the committed image, scores `hit = predictedValence == valence`, and reveals the actual image.
 
-The **target source is the future drand round only** — fully reproducible by anyone, no trust in the server's entropy. Trials (choice, round, `B_R`, valence, image path + sha256, hit, signature) fold into a per-session Merkle root; the trial list is the content-addressed raw blob. Two-way comms is sound because the image is bound to a round nobody can predict at choice time — there is no channel to game (contrast micro-PK's one-way isolation). Every trial is re-verifiable offline (`analyze.py`) and **in-browser** (`/verify`): both re-derive each `{valence, image}` from `B_R`, confirm the shown image against the committed manifest, **fetch and re-hash the actual pixels**, check each signature and `R > R0`, and reproduce the Merkle root — the chain runs beacon → committed image hash → real pixels → valence → hit. Residual: the server could backdate when it received a choice — the §7.4 timing attack, closed only by live witnesses (Phase 3).
+The **target source is the future drand round only** — fully reproducible by anyone, no trust in the server's entropy. Trials (choice, round, `B_R`, valence, image path + sha256, hit, signature) fold into a per-session Merkle root; the trial list is the content-addressed raw blob. Two-way comms is sound because the image is bound to a round nobody can predict at choice time — there is no channel to game (contrast micro-PK's one-way isolation). Every trial is re-verifiable offline (`analyze.py`) and **in-browser** (`/verify`): both re-derive each `{valence, image}` from `B_R`, confirm the shown image against the committed manifest, **fetch and re-hash the actual pixels**, check each signature and `R > R0`, and reproduce the Merkle root — the chain runs beacon → committed image hash → real pixels → valence → hit. The §7.4 **choice-timing residual** (a server backdating when it received a choice) is now **closed by live witnesses (D16)**: before waiting for `R`, an independent witness co-signs the choice commit while `R` is still in the future (`witnessRound < R`, refusing otherwise), and both `analyze.py` and `/verify` re-check that co-signature and its ordering. The operator UI masks the synchronous co-sign with a brief "sensing" animation.
 
 ### 7.6 Implementation status (Phase 1)
 Built and verified end-to-end (TypeScript server + independent Python re-verification):
@@ -289,8 +304,11 @@ Residual hardening — completed in Phase 2:
 - **Subresource-integrity** on the emitted bundle: a post-build step pins every bundled asset by sha384, so the browser rejects a tampered or swapped script/style. With the npm-bundled deps, the esm.sh CDN gap is fully closed.
 - **Automated external anchoring**: `npm run anchor` submits the ledger head to OpenTimestamps and writes a standard detached `.ots` proof to upgrade/verify later (Bitcoin-anchored, no account, no cost).
 
-Remaining (Phase 3):
-- **Live witnesses** to fully close the residual "parallel-runs" attack (§7.4).
+Phase 3 — DONE:
+- **Live witnesses (D16)** close the parallel-runs (micro-PK) and choice-timing (precognition) residuals (§7.4). An independent `packages/witness` node co-signs the open, every checkpoint, every forced choice, and the seal in real time — binding a self-verified drand round + an RFC 3161 TSA on its own append-only feed — re-verified offline (`analyze.py`) and in-browser (`/verify`). M-of-N capable, deployed at N=1.
+
+Remaining (Phase 3+):
+- **Witness federation** (P2P gossip between independent peer nodes; the data model is already M-of-N) and **full in-code RFC 3161 token validation** (today delegated to `openssl ts -verify`, as the OTS proofs are to `ots verify`).
 
 ---
 
@@ -320,6 +338,8 @@ psymeter/
     core/               TS, pure & I/O-free: commitments, Merkle, ledger chaining,
                         canonicalization, scoring-for-display. Exhaustively unit-tested.
     server/             TS: HTTP + WebSocket, session orchestration, generation loop, storage
+    witness/            TS: independent live-witness node (D16) — co-signs checkpoints/choices
+                        with a self-verified drand round + RFC 3161 TSA, on its own append-only feed
     entropy-provider/   Rust: raw-bytes sidecar (os | rdseed | usb-trng) + metadata/health
     client/             TS + three.js: operator UI (anchor, timer, live visual, anomaly cue)
   analysis/             Python: deterministic stats over published raw data + ledger
@@ -357,7 +377,7 @@ Every entry is immutable and hash-chained; a session is a `session.open` entry f
   "seq": 12345,
   "ts": "2026-06-17T12:34:56.789Z",   // informational; the beacon is the trusted time
   "prevHash": "sha256:…",             // hash of previous entry
-  "type": "session.open",             // session.open | session.seal | baseline.seal | external.anchor
+  "type": "session.open",             // session.open | session.seal | baseline.seal | external.anchor | witness.anchor
   "payload": { /* type-specific, below */ },
   "entryHash": "sha256:…"             // H(JCS(seq, ts, prevHash, type, payload))
 }
@@ -384,13 +404,24 @@ Every entry is immutable and hash-chained; a session is a `session.open` entry f
   "sessionId": "uuid",
   "openEntryHash": "sha256:…",         // binds back to the open entry
   "outputCommitment": "merkle:…",      // root over all raw samples
-  "checkpoints": ["merkle:…", "…"],    // periodic roots streamed live (lightweight witness)
   "nSamples": 180000,
   "rawBlobRef": "blob/sha256-<root>.bin.zst",  // content-addressed raw stream
-  "summary": { "ones": 90042, "zDisplay": 0.21 }  // DISPLAY ONLY — not authoritative
+  "summary": { "ones": 90042, "zDisplay": 0.21 },  // DISPLAY ONLY — not authoritative
+  // --- live witnesses (D16); ADDITIVE + OPTIONAL — absent ⇒ byte-identical to the pre-D16 seal ---
+  "witnessed": true,
+  "witness": {                         // open + seal co-signatures, and the quorum used
+    "threshold": 1,
+    "keys": ["ed25519:…"],
+    "open":  [ { "witnessPubKey": "ed25519:…", "witnessRound": 4567890, "witnessChainHash": "…", "witnessSig": "ed25519:…", "feedSeq": 12, "feedEntryHash": "sha256:…" } ],
+    "seal":  [ { "…": "…" } ]
+  },
+  "checkpoints": [                     // micro-PK: each live checkpoint root + its co-signatures
+    { "trial": 5, "root": "sha256:…", "witness": [ { "…": "…" } ] }
+  ]
+  // (precognition stores each choice's `witness[]` inside its per-trial record in the raw blob)
 }
 ```
-`external.anchor` entries periodically publish the current head hash with its TSA / git / OpenTimestamps proofs.
+`external.anchor` entries periodically publish the current head hash with its TSA / git / OpenTimestamps proofs. `witness.anchor` entries cross-bind the independent **witness feed** head (+ its TSA/OTS refs) into the main chain (D16); the witness feed itself is a sibling hash-chained log of `witness.attest` entries, verified by the same machinery.
 
 ### 8.6 Timing note (addresses a common objection)
 Statistical validity depends only on collecting the pre-declared **N independent samples**, not on wall-clock regularity. We therefore **decouple** the fixed, documented sampling regime from the visual frame rate: the three.js view is a *downsampled* projection of the stream. Event-loop jitter or GC pauses can affect the *animation*, never the binomial count — so they pose no validity risk.
@@ -402,7 +433,7 @@ Statistical validity depends only on collecting the pre-declared **N independent
 - **Phase 0 — DONE:** Methodology locked (D1–D13) and the provenance flow specified (§7).
 - **Phase 1 — DONE:** Local instrument — binary micro-PK with the full provenance spine (operator signing → drand beacon → one-way generation → streaming Merkle → content-addressed raw-blob persistence → hash-chained ledger → external-anchor receipts), RDSEED real-entropy self-testing, and independent Python verification.
 - **Phase 2 (next):** The **public website** (see §10) + the **two-color precognition** experiment; per-operator identity & history; the leaderboard/aggregate view done correctly (D4).
-- **Phase 3:** Hardware TRNG/QRNG integration + characterization; live witnesses + external ledger anchoring; cloud deployment (likely AWS); pre-registration finalized.
+- **Phase 3 (in progress):** **Live witnesses — DONE (D16):** independent real-time co-signing of the open, checkpoints, choices, and seal closes the §7.4 parallel-runs & choice-timing residuals (`packages/witness`, re-verified in `analyze.py` + `/verify`). Remaining: hardware TRNG/QRNG integration + characterization; witness federation (P2P peers); cloud deployment (likely AWS); pre-registration finalized.
 - **Phase 4:** Confirmatory collection period → public dataset release → paper.
 
 ---

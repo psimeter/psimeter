@@ -17,6 +17,7 @@ import {
 import { saveContact } from './contactStore.js';
 import { selectEntropySource } from './select.js';
 import { selectBeacon, type BeaconProvider } from './beacon.js';
+import { selectWitnessClient, type WitnessClient } from './witnessClient.js';
 import { commitOpen, prepareSession, type SessionContext } from './session.js';
 import { streamMicroPk } from './kinds/microPk.js';
 import { streamPrecog } from './kinds/precog.js';
@@ -93,6 +94,7 @@ export function createApp(): http.Server {
   store.ensureGenesis();
   const entropy: EntropySource = selectEntropySource();
   const beaconProvider = selectBeacon();
+  const witness = selectWitnessClient();
   const sessions = new Map<string, SessionContext>();
   const reader = new LedgerReader(ledgerPath);
 
@@ -105,6 +107,12 @@ export function createApp(): http.Server {
   console.log(
     `[beacon] using "${beaconProvider.id}"` +
       (beaconProvider.id === 'dev' ? '  - NON-CONFIRMATORY placeholder (offline)' : ''),
+  );
+  // eslint-disable-next-line no-console
+  console.log(
+    witness.enabled
+      ? `[witness] live witnessing ON: ${witness.urls.length} witness(es), threshold ${witness.threshold} (spec D16)`
+      : '[witness] live witnessing OFF (set PSYMETER_WITNESS=url[,url] to enable; sessions sealed as witnessed:false)',
   );
 
   const server = http.createServer((req, res) => {
@@ -138,6 +146,16 @@ export function createApp(): http.Server {
       // Per-operator psi leaderboard (D15 / H1): consistency, not lucky sessions.
       if (path === '/api/leaderboard') {
         sendJson(res, 200, leaderboard(reader.summaries()));
+        return;
+      }
+      // Configured live witnesses (D16): identities + threshold, so the in-browser
+      // /verify knows which co-signers to expect. The trusted set is ultimately the
+      // auditor's (a published list), not whatever the server reports here.
+      if (path === '/api/witness') {
+        void witness.info().then(
+          (witnesses) => sendJson(res, 200, { enabled: witness.enabled, threshold: witness.threshold, witnesses }),
+          () => sendJson(res, 200, { enabled: witness.enabled, threshold: witness.threshold, witnesses: [] }),
+        );
         return;
       }
       // Lightweight per-operator psi score (for the always-visible header chip).
@@ -187,7 +205,7 @@ export function createApp(): http.Server {
       return;
     }
     const id = url.searchParams.get('session') ?? '';
-    wss.handleUpgrade(req, socket, head, (ws) => handleStream(ws, id, store, sessions, beaconProvider));
+    wss.handleUpgrade(req, socket, head, (ws) => handleStream(ws, id, store, sessions, beaconProvider, witness));
   });
 
   return server;
@@ -374,6 +392,7 @@ function handleStream(
   store: LedgerStore,
   sessions: Map<string, SessionContext>,
   beaconProvider: BeaconProvider,
+  witness: WitnessClient,
 ): void {
   const ctx = sessions.get(id);
   if (!ctx || !ctx.open || ctx.started) {
@@ -388,10 +407,10 @@ function handleStream(
   // one-way stream; precognition is a two-way per-trial commit→reveal loop.
   switch (ctx.experiment.kind) {
     case 'micro-pk-binary':
-      streamMicroPk(ws, ctx, store, { blobDir, fast: FAST });
+      streamMicroPk(ws, ctx, store, witness, { blobDir, fast: FAST });
       break;
     case 'precognition-presentiment':
-      streamPrecog(ws, ctx, store, beaconProvider, { blobDir });
+      streamPrecog(ws, ctx, store, beaconProvider, witness, { blobDir });
       break;
     default:
       safeSend(ws, { type: 'error', message: `no runner for kind "${ctx.experiment.kind}"` });

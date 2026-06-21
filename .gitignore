@@ -9,10 +9,12 @@ coverage/
 __pycache__/
 *.pyc
 
-# local dev ledger output (regenerated; not the published dataset)
-ledger/*.jsonl
-ledger/blobs/
-ledger/anchors/
+# local dev ledger output (regenerated; not the published dataset).
+# Ignore EVERYTHING under ledger/ — *.jsonl, blobs/, anchors/, witness feeds,
+# the witness key (a private key!), .tsr/.ots proofs, contacts — except the
+# tracked .gitkeep placeholder. No dev-run artifact is ever committable.
+ledger/*
+!ledger/.gitkeep
 
 # misc
 *.log

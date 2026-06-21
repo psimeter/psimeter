@@ -4,11 +4,13 @@ import {
   choiceVocabulary,
   derivePresentimentTarget,
   trialCommit,
+  type WitnessAttestation,
 } from '@psymeter/core';
 import type { WebSocket, RawData } from 'ws';
 import type { LedgerStore } from '../ledgerStore.js';
 import type { SessionContext } from '../session.js';
 import type { BeaconProvider } from '../beacon.js';
+import type { WitnessClient } from '../witnessClient.js';
 import { verifyEd25519 } from '../sign.js';
 import { writeBlob } from '../blobStore.js';
 import { safeSend } from '../wsSend.js';
@@ -37,6 +39,9 @@ interface TrialRecord {
   imageSha256: string;
   hit: number; // 0 | 1 (integer for canonical parity)
   operatorSig: string;
+  /** Independent witness co-signatures of THIS choice, taken before the target
+   * round published (D16). Present only when a witness is configured. */
+  witness?: WitnessAttestation[];
 }
 
 /**
@@ -46,19 +51,22 @@ interface TrialRecord {
  *   2. client → `choice`  (the chosen option; the moment of decision)
  *   3. server → `pending` (assigns a FUTURE round R = latest + offset, and R0)
  *   4. client → `sign`    (Ed25519 over trialCommit{choice,R,R0,…})
- *   5. server → `reveal`  (waits for R, derives target from B_R, scores the hit)
+ *   5. server → `sensing` (independent witness co-signs the choice; UI animates)
+ *   6. server → `reveal`  (waits for R, derives target from B_R, scores the hit)
  *
  * Two-way comms is sound here precisely because the target is bound to a beacon
  * round that has not been published — neither operator nor server can know it at
  * choice time, so there is no channel to game (contrast micro-PK's one-way
- * isolation). Each trial's choice is operator-signed before R publishes, so the
- * whole session is re-verifiable from the public beacon with no trust in us.
+ * isolation). Each trial's choice is operator-signed AND, when a witness is
+ * configured (D16), independently co-signed while the target is still FUTURE —
+ * so the server cannot backdate when the choice arrived.
  */
 export function streamPrecog(
   ws: WebSocket,
   ctx: SessionContext,
   store: LedgerStore,
   beacon: BeaconProvider,
+  witness: WitnessClient,
   opts: { blobDir: string },
 ): void {
   const p = ctx.params as unknown as PrecogParams;
@@ -67,18 +75,11 @@ export function streamPrecog(
   const pools: Stimulus[][] = [stimuli[vocab[0]!] ?? [], stimuli[vocab[1]!] ?? []];
   const merkle = new MerkleAccumulator();
   const records: TrialRecord[] = [];
+  let openWitness: WitnessAttestation[] = [];
   let hits = 0;
   let trialIndex = 0;
   let pending: { targetRound: number; prevBeaconRound: number; choice: string } | null = null;
   let closed = false;
-
-  safeSend(ws, {
-    type: 'started',
-    trialsPerSession: p.trialsPerSession,
-    optionsPerTrial: p.optionsPerTrial,
-    sessionSeconds: p.sessionSeconds,
-    beaconSource: beacon.id,
-  });
 
   function fail(message: string): void {
     if (closed) return;
@@ -120,9 +121,26 @@ export function streamPrecog(
       fail('invalid trial signature');
       return;
     }
-    // Timing guard: the signed choice must arrive before the target publishes.
-    // (An untrusted server could still backdate this — the residual §7.4 timing
-    // attack, closed only by live witnesses in Phase 3.)
+
+    // Independent live witness co-signs the choice while the target round is still
+    // FUTURE (D16). The witness fetches+verifies its own round and refuses if
+    // targetRound is already public, so the choice provably precedes the target —
+    // closing the §7.5 backdating residual. A quorum failure voids the session.
+    let trialWitness: WitnessAttestation[] = [];
+    if (witness.enabled) {
+      safeSend(ws, { type: 'sensing', trialIndex });
+      try {
+        trialWitness = await witness.attestQuorum({
+          subjectHash: tc, sessionId: ctx.sessionId, trialIndex, kind: 'choice', claimedTargetRound: targetRound,
+        });
+      } catch (e) {
+        fail(`witness unavailable (${String(e)}) — session voided to preserve choice-timing integrity`);
+        return;
+      }
+    }
+
+    // Server-side timing guard (defense in depth; the witness's check is the
+    // independent one an auditor relies on).
     const now = await beacon.fetchPulse();
     if (now.round >= targetRound) { fail('trial timing violation: target already public'); return; }
 
@@ -137,6 +155,7 @@ export function streamPrecog(
       valence, imagePath: image.path, imageSha256: image.sha256, hit, operatorSig: String(m.operatorSig),
     };
     if (b.signature) rec.beaconSignature = b.signature;
+    if (trialWitness.length) rec.witness = trialWitness;
     records.push(rec);
     merkle.add(new TextEncoder().encode(canonicalize(rec)));
 
@@ -161,17 +180,25 @@ export function streamPrecog(
     if (closed) return;
     closed = true;
     const blob = writeBlob(opts.blobDir, new TextEncoder().encode(canonicalize(records)));
-    const sealEntry = store.append('session.seal', {
+    const outputCommitment = merkle.root();
+    const payload: Record<string, unknown> = {
       sessionId: ctx.sessionId,
       openEntryHash: ctx.open!.entryHash,
-      outputCommitment: merkle.root(),
+      outputCommitment,
       rawSha256: blob.sha256,
       rawBlobRef: blob.ref,
       trials: records.length,
       hits,
       optionsPerTrial: p.optionsPerTrial,
-    });
-    const sp = sealEntry.payload as { outputCommitment: string };
+    };
+    // Additive witness fields, present only when witnessing is on (back-compat).
+    if (witness.enabled) {
+      const sealWitness = await witness.attestQuorum({ subjectHash: outputCommitment, sessionId: ctx.sessionId, kind: 'seal' });
+      const keys = [...new Set([...openWitness, ...sealWitness, ...records.flatMap((r) => r.witness ?? [])].map((a) => a.witnessPubKey))];
+      payload.witnessed = true;
+      payload.witness = { threshold: witness.threshold, keys, open: openWitness, seal: sealWitness };
+    }
+    const sealEntry = store.append('session.seal', payload);
     safeSend(ws, {
       type: 'seal',
       sessionId: ctx.sessionId,
@@ -179,10 +206,11 @@ export function streamPrecog(
       hits,
       trials: records.length,
       optionsPerTrial: p.optionsPerTrial,
-      outputCommitment: sp.outputCommitment,
+      outputCommitment,
       rawBlobRef: blob.ref,
       openEntryHash: ctx.open!.entryHash,
       sealEntryHash: sealEntry.entryHash,
+      witnessed: witness.enabled,
     });
     ws.close();
   }
@@ -194,5 +222,24 @@ export function streamPrecog(
     else if (m.type === 'sign') void onSign(m as { trialIndex: number; operatorSig: string }).catch((e) => fail(String(e)));
   });
 
-  nextTrial();
+  // Witness the session open (if configured), then begin the trial loop.
+  void (async () => {
+    if (witness.enabled && ctx.open) {
+      try {
+        openWitness = await witness.attestQuorum({ subjectHash: ctx.open.entryHash, sessionId: ctx.sessionId, kind: 'open' });
+      } catch (e) {
+        fail(`witness unavailable at open (${String(e)})`);
+        return;
+      }
+    }
+    safeSend(ws, {
+      type: 'started',
+      trialsPerSession: p.trialsPerSession,
+      optionsPerTrial: p.optionsPerTrial,
+      sessionSeconds: p.sessionSeconds,
+      beaconSource: beacon.id,
+      witnessed: witness.enabled,
+    });
+    nextTrial();
+  })();
 }
