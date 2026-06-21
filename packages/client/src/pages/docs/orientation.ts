@@ -1,5 +1,5 @@
 // Orientation chapters: Start here, the core principle, and the glossary.
-// Content mirrors docs/SPECIFICATION.md §1–§3 and the design pillars (§2).
+// Content mirrors spec/RATIONALE.md §1–§3 and the design pillars (§2).
 
 import { el } from '../../ui';
 import type { Child } from '../../ui';

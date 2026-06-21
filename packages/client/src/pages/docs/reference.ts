@@ -87,7 +87,7 @@ export function renderDecisions(): Child[] {
       ]),
     )),
     callout(
-      'These mirror §6 of ', code('docs/SPECIFICATION.md'),
+      'These mirror §6 of ', code('spec/RATIONALE.md'),
       '. “OPEN” items still need the owner’s input before they affect build work; “DECIDED” items are locked and reflected in the code.',
     ),
   ];
@@ -145,9 +145,10 @@ export function renderReferences(): Child[] {
       )),
     ]),
     callout(
-      'The canonical, continuously-updated source of truth is the project’s own ',
-      code('docs/SPECIFICATION.md'),
-      ' and the open code in the repository. This wiki is its public mirror; if you find drift, it’s a bug worth reporting.',
+      'The canonical, continuously-updated source of truth is the project’s own normative ',
+      code('spec/psimeter-protocol.md'),
+      ' (with the decision log in ', code('spec/RATIONALE.md'),
+      ') and the open code in the repository. This wiki is its public mirror; if you find drift, it’s a bug worth reporting.',
     ),
   ];
 }
