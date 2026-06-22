@@ -17,7 +17,7 @@ function sidecarBinPath(): string {
  * Choose the entropy source for this server process.
  *
  * Default: prefer the RDSEED sidecar when it is built and reports `available`,
- * so the owner self-tests on real physical entropy (pilot-grade, D1). Falls back
+ * for local self-testing on real physical entropy (pilot-grade, D1). Falls back
  * to the NON-CONFIRMATORY OS source. Override with `PSIMETER_ENTROPY=os|rdseed`.
  */
 export function selectEntropySource(): EntropySource {

@@ -241,7 +241,7 @@ grid  PSI_ALT_GRID = [0.1, 0.2, 0.4, 0.8]   (equal weights)`,
     ul([
       [b('Static-bias confound (micro-PK only). '), 'A one-sided-intention operator could in principle accrue wealth from a biased source rather than psi. Mitigated by HIGH/LOW balance; the confirmatory analysis centers on the ', link(P.results, 'calibrated baseline'), ' and the HIGH−LOW contrast. Presentiment is unaffected (exact beacon-derived fair coin).'],
       [b('Sybil / multi-key fishing. '), 'Minting many browser keys just buys more lottery tickets — the multiple-comparisons problem again, answered by the confirmatory phase plus optional stronger identity for flagged candidates, not on the firehose.'],
-      [b('Experimenter-as-subject. '), 'The score is recomputable from the public ledger by anyone, never server-asserted, so the owner topping his own leaderboard is independently checkable (decision ', link(P.decisions, 'D12'), ').'],
+      [b('Experimenter-as-subject. '), 'The score is recomputable from the public ledger by anyone, never server-asserted, so an operator who also hosts the server topping their own leaderboard is independently checkable (decision ', link(P.decisions, 'D12'), ').'],
     ]),
     p(
       'Crossing the threshold unlocks a voluntary contact form: the operator ',

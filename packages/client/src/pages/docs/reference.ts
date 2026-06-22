@@ -48,9 +48,9 @@ const DECISIONS: Decision[] = [
   { id: 'D11', status: 'OPEN (recommend)', title: 'Confirmatory hardware device', body: [
     'No budget day one: pilot on RDSEED ($0) → add an open-hardware USB TRNG (≈ $35–50) for citable early data → a QRNG later for the flagship dataset. Source-agnostic design now.',
   ] },
-  { id: 'D12', status: 'OPEN (recommend adopt)', title: 'Experimenter-as-subject safeguards', body: [
-    'The owner is also a subject (the “PEAR Operator 10” risk). Safeguards: an ordinary pseudonymous key; the owner’s data analyzed/reported separately and always subject to leave-one-out and per-operator caps; ideally an independent co-signer of the analysis script and anchors. The ',
-    link(P.psiScore, 'psi score'), ' is recomputable by anyone, so the owner topping his own board is checkable.',
+  { id: 'D12', status: 'DECIDED (separation adopted)', title: 'Experimenter-as-subject safeguards', body: [
+    'An experimenter who is also a putative subject is a credibility risk (the “PEAR Operator 10” risk). The strongest safeguard is adopted: the experimenter role is excluded from the confirmatory subject pool entirely. The confirmatory analysis is a frozen, deterministic script over the public ledger, with an independent co-signer invited for the freeze and the anchors. The ',
+    link(P.psiScore, 'psi score'), ' is recomputable by anyone, so an operator who also hosts the server topping their own board stays checkable.',
   ] },
   { id: 'D13', status: 'DECIDED', title: 'Experiment parameters & configurability', body: [
     'Parameters are configurable but versioned & immutable once published: each experiment is an ', code('ExperimentDefinition'),
@@ -88,7 +88,7 @@ export function renderDecisions(): Child[] {
     )),
     callout(
       'These mirror §6 of ', code('spec/RATIONALE.md'),
-      '. “OPEN” items still need the owner’s input before they affect build work; “DECIDED” items are locked and reflected in the code.',
+      '. “OPEN” items still need a project decision before they affect build work; “DECIDED” items are locked and reflected in the code.',
     ),
   ];
 }

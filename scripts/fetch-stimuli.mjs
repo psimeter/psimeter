@@ -2,8 +2,8 @@
 //
 // Pulls a small set of CC0 / public-domain images per emotional category from the
 // Openverse API into stimuli/<category>/, and records attributions in
-// stimuli/CREDITS.md. This is a CONVENIENCE for seeding a starter set — the owner
-// is expected to review the images and can drop in their own. After fetching (or
+// stimuli/CREDITS.md. This is a CONVENIENCE for seeding a starter set — you
+// are expected to review the images and can drop in your own. After fetching (or
 // changing) images, run scripts/build-stimuli.mjs to hash them into the
 // content-addressed experiment definition.
 //

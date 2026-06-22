@@ -162,7 +162,7 @@ export function renderCrypto(): Child[] {
     p('The hash chain proves internal consistency; external anchoring proves the corpus existed at a point in real time and can’t be rebuilt later. PsiMeter uses two complementary anchors:'),
     ul([
       [b('OpenTimestamps → Bitcoin. '), code('npm run anchor'), ' submits the ledger head to ', ext(REF.opentimestamps, 'OpenTimestamps'), ' and writes a standard detached ', code('.ots'), ' proof you can upgrade and verify later — Bitcoin-anchored, no account, no cost.'],
-      [b('RFC 3161 Time-Stamp Authority. '), 'An independent ', ext(REF.rfc3161, 'TSA'), ' co-signs feed heads (used heavily by ', link(P.witnesses, 'witnesses'), '), giving an un-forgeable timestamp at TSA granularity even when only the owner runs a node.'],
+      [b('RFC 3161 Time-Stamp Authority. '), 'An independent ', ext(REF.rfc3161, 'TSA'), ' co-signs feed heads (used heavily by ', link(P.witnesses, 'witnesses'), '), giving an un-forgeable timestamp at TSA granularity even when only a single self-hosted node runs.'],
     ]),
     callout(
       'Note the layering: drand proves “not ', em('before'),
@@ -189,7 +189,7 @@ export function renderEntropy(): Child[] {
       el('div', { class: 'card rung mid' }, [
         el('span', { class: 'rung-tag' }, 'rdseed'),
         el('div', {}, [el('div', { class: 'rung-name' }, 'CPU RDSEED — real physical, pilot-grade'),
-          p('The CPU’s on-die thermal-noise entropy source (', ext(REF.drng, 'Intel DRNG'), '; distinct from ', code('RDSEED'), '’s cousin ', code('RDRAND'), ', which is a CSPRNG reseeded by it). Genuinely physical, free, already in the owner’s PC — good for local self-testing, but whitened on-die and vendor-opaque, so not the most auditable choice for publication. Auto-selected when the Rust sidecar is built.')]),
+          p('The CPU’s on-die thermal-noise entropy source (', ext(REF.drng, 'Intel DRNG'), '; distinct from ', code('RDSEED'), '’s cousin ', code('RDRAND'), ', which is a CSPRNG reseeded by it). Genuinely physical, free, already in a typical PC — good for local self-testing, but whitened on-die and vendor-opaque, so not the most auditable choice for publication. Auto-selected when the Rust sidecar is built.')]),
       ]),
       el('div', { class: 'card rung mid' }, [
         el('span', { class: 'rung-tag' }, 'usb-trng'),
@@ -273,7 +273,7 @@ export function renderWitnesses(): Child[] {
     h2('time', 'Trusted time — three layers'),
     ul([
       [b('Per attestation: a drand round '), 'the witness fetched and BLS-verified itself, so ', code('witnessRound < targetRound'), ' is the publicly re-checkable timing fact for precognition.'],
-      [b('Feed head: a free RFC 3161 TSA '), '— an independent party whose timestamp the experimenter cannot forge, so even a single owner-run witness is un-backdatable to TSA granularity.'],
+      [b('Feed head: a free RFC 3161 TSA '), '— an independent party whose timestamp the experimenter cannot forge, so even a single self-hosted witness is un-backdatable to TSA granularity.'],
       [b('Long-term: OpenTimestamps / Bitcoin '), 'via the main ledger’s ', code('witness.anchor'), ' entry, freezing the feed permanently.'],
     ]),
 
@@ -290,7 +290,7 @@ export function renderWitnesses(): Child[] {
 
     h2('honesty', 'The honest limit'),
     warn(
-      'A single witness the experimenter also runs is not independence on its own. That is exactly why the time anchor is externally rooted: at N=1 with the owner running the only node, the un-forgeable root is the ',
+      'A single witness the experimenter also runs is not independence on its own. That is exactly why the time anchor is externally rooted: at N=1 with a single self-run node, the un-forgeable root is the ',
       b('RFC 3161 TSA'),
       ' (and OTS/Bitcoin long-term), not the node itself — so backdating is bounded to TSA granularity even then. Strength scales with genuinely independent peers, and the project invites anyone to run one. Full accounting in the ',
       link(P.threat, 'threat model'), '.',

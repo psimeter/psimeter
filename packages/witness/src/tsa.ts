@@ -3,7 +3,7 @@
  *
  * The witness periodically stamps its feed HEAD with an independent TSA, so the
  * "this feed prefix existed at time T" anchor comes from a third party the
- * experimenter cannot forge — this is what makes even a single owner-run witness
+ * experimenter cannot forge — this is what makes even a single self-hosted witness
  * un-backdatable (the TSA, not the witness's own clock, fixes the time).
  *
  * Like our OpenTimestamps client, this is operational tooling, NOT part of the

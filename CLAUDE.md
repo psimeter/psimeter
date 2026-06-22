@@ -7,8 +7,10 @@ precognition). It has **two equally important parts**:
 1. **The scientific instrument** — rigorous, fraud-resistant, auditable methodology (Phase 0–1, done).
 2. **A public-facing, gamified website** — that strangers worldwide will actually use (Phase 2, next).
 
-The owner is also a test subject (a putative RNG-influencer) and wants to prove **or** disprove,
-at scale, on no budget. Be outcome-neutral and supportive; the rigor protects against self-deception.
+The project tests, at scale and on no budget, whether some people can influence a true RNG or
+anticipate future outcomes. Be strictly outcome-neutral and supportive — a null is a perfectly good
+result. Note (D12): the experimenter role does **not** participate as a confirmatory subject (the
+strongest experimenter/subject-separation safeguard); the rigor also guards against self-deception.
 
 ## The one non-negotiable
 **Treat the experimenter/server as an UNTRUSTED party.** A skeptic must verify every result from
@@ -26,7 +28,7 @@ The `spec/` directory is the single source of truth ([`spec/README.md`](spec/REA
   **two hypotheses H1/H2 (§5)**, **decision log D1–D16 (§6)**, provenance narrative (§7), architecture
   (§8), phasing (§9), **public website plan (§10)**. The former `docs/SPECIFICATION.md` (now a pointer).
   Its `§`-numbers are its own; on any conflict the protocol spec wins.
-- Keep the spec updated as decisions land. Auto-loaded memory: project overview, owner-is-subject, Phase 2 website plan.
+- Keep the spec updated as decisions land. Auto-loaded memory: project overview, experimenter/subject separation (D12), Phase 2 website plan.
 
 ## Status — Phase 0–1 COMPLETE (verified, committed)
 - **Methodology locked (D1–D13):** true-physical RNG; tripolar HIGH/LOW/BASELINE; fixed-N, no optional
