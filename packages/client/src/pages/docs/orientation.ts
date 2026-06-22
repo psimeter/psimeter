@@ -29,12 +29,12 @@ export function renderStart(): Child[] {
     h2('non-negotiable', 'The one non-negotiable'),
     callout(
       b('The experimenter is treated as an untrusted party. '),
-      'A skeptic must be able to verify every result from public artifacts alone, without trusting the owner, the server, or the host. This single principle drives the entire cryptographic design — it is explained in full in ',
+      'A skeptic must be able to verify every result from public artifacts alone, without trusting the operator, the server, or the host. This single principle drives the entire cryptographic design — it is explained in full in ',
       link(P.principle, 'Why you don’t have to trust us'), '.',
     ),
     p(
-      'The project owner is also a test subject (a self-described RNG-influencer) and wants to prove ', b('or'),
-      ' disprove the effect at scale, on no budget. The stance is outcome-neutral: a flat, boring null is a perfectly good — and frankly likely — result. The same machinery that would catch a fraudulent experimenter also protects the owner from self-deception.',
+      'PsiMeter sets out to prove ', b('or'),
+      ' disprove these effects at scale, on no budget. The stance is outcome-neutral: a flat, boring null is a perfectly good — and frankly likely — result. The experimenter is kept out of the confirmatory subject pool entirely, and the same machinery that would catch a fraudulent experimenter also guards against self-deception.',
     ),
 
     h2('how-to-read', 'How to read this wiki'),
@@ -66,7 +66,7 @@ export function renderPrinciple(): Child[] {
 
     h2('untrusted', 'The experimenter is untrusted'),
     p(
-      'A credible result cannot require anyone to trust the server operator. So the design assumes the operator — us, the owner, the host — might be incompetent, biased, or actively fraudulent, and asks: ',
+      'A credible result cannot require anyone to trust the server operator. So the design assumes the operator — whoever runs the server — might be incompetent, biased, or actively fraudulent, and asks: ',
       em('can an independent auditor, months later, with only the public log, still reconstruct the truth?'),
       ' Everything in ', link(P.provenance, 'the provenance spine'), ' exists to make the answer “yes.”',
     ),

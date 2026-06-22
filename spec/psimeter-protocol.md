@@ -778,7 +778,7 @@ by re-computation; the items below enumerate what remains and how it is bounded.
 - **Witness independence — the honest frontier.** Witnesses help only insofar as they are independent
   of the experimenter. Against a server colluding with *every* witness, only an M-of-N quorum of
   genuinely independent witnesses helps (≤ N−M colluding). The protocol is M-of-N capable but the
-  reference deployment is N = 1. At N = 1 with the owner running the only node, the un-forgeable time
+  reference deployment is N = 1. At N = 1 with a single self-run node, the un-forgeable time
   root is the **RFC 3161 TSA** (and OTS/Bitcoin long-term), not the node itself, so backdating is
   bounded to TSA granularity even then. Un-witnessed sessions MUST NOT be pooled with witnessed
   confirmatory data; strength scales with the number of independent peers running witnesses.

@@ -42,9 +42,9 @@ const GROUPS: Group[] = [
     intro: 'The part that matters if you are looking for weaknesses. All of it is fixed in the open specification and decision log.',
     items: [
       {
-        q: 'Why should I trust results from someone who wants psi to be real?',
-        a: ['You shouldn\'t have to — that is the whole design. The experimenter (us, the owner, the host) is treated as an ', el('strong', {}, 'untrusted party'),
-          '. Every session is committed before the data exists, signed, hash-chained, externally timestamped, and recomputable by anyone. The same machinery that would catch a fraudulent experimenter also protects the owner from fooling himself.'],
+        q: 'Why should I trust results from the people running this?',
+        a: ['You shouldn\'t have to — that is the whole design. The experimenter (us, the host) is treated as an ', el('strong', {}, 'untrusted party'),
+          '. Every session is committed before the data exists, signed, hash-chained, externally timestamped, and recomputable by anyone. The same machinery that would catch a fraudulent experimenter also guards against self-deception.'],
       },
       {
         q: 'What stops you faking or cherry-picking my results?',
