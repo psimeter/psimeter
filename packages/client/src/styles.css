@@ -86,11 +86,7 @@ h1, h2, h3 { line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; }
 }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-weight: 650; }
 .brand:hover { text-decoration: none; }
-.brand-mark {
-  width: 14px; height: 14px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--accent-bright), var(--accent) 55%, #2b62b8 100%);
-  box-shadow: 0 0 12px var(--accent-glow);
-}
+.brand-logo { height: 24px; width: auto; display: block; }
 .brand-name { letter-spacing: -0.02em; font-size: 16px; }
 
 .nav { display: flex; gap: 4px; margin-left: 8px; flex: 1; }
@@ -134,11 +130,14 @@ a.soon-card h3 { color: var(--accent-bright); }
 
 .site-footer {
   border-top: 1px solid var(--line-soft);
-  padding: 20px clamp(16px, 4vw, 34px);
+  padding: 22px clamp(16px, 4vw, 34px);
   color: var(--text-faint); font-size: 12.5px;
-  display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
+  display: flex; flex-direction: column; gap: 10px;
 }
-.site-footer a { color: var(--text-dim); }
+.footer-links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.footer-links a { color: var(--text-dim); }
+.footer-links a:hover { color: var(--text); }
+.footer-note { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
 .site-footer .sep { color: var(--line); }
 
 /* focus mode: during a live session, strip the chrome for concentration */
@@ -149,7 +148,7 @@ body.focus .site-footer { display: none; }
 .btn {
   appearance: none; border: 1px solid var(--line); background: var(--bg-2);
   color: var(--text); font: inherit; font-size: 14px; font-weight: 550;
-  padding: 10px 16px; border-radius: 10px; cursor: pointer;
+  padding: 10px 16px; border-radius: 10px; cursor: pointer; white-space: nowrap;
   transition: border-color .15s, background .15s, transform .05s;
 }
 .btn:hover { border-color: #2c3a4c; background: var(--bg-3); }
@@ -207,12 +206,12 @@ body.focus .site-footer { display: none; }
 /* ====================================================================
    ABOUT / HOW IT WORKS — wide, dual-audience layout (spec §10.1)
    ==================================================================== */
-.about { max-width: 1140px; }
+.about { max-width: 940px; }
 .about p { color: #cdd6e2; }
 
-.about-hero { max-width: 70ch; margin: 0 0 8px; }
+.about-hero { max-width: none; margin: 0 0 8px; }
 .about-hero h1 { font-size: clamp(28px, 5vw, 44px); margin: 10px 0 0; letter-spacing: -0.025em; }
-.about-hero .lede { margin: 16px 0 0; }
+.about-hero .lede { margin: 16px 0 0; max-width: 72ch; }
 .about-hero .rule {
   margin: 16px 0 0; padding: 14px 18px; font-size: clamp(15px, 2vw, 17px);
   color: var(--text); font-weight: 550; line-height: 1.5;
@@ -230,13 +229,12 @@ body.focus .site-footer { display: none; }
 .section-lede { max-width: 76ch; color: var(--text-dim) !important; margin: 0 0 22px; font-size: clamp(14px, 1.8vw, 16px); }
 .section-lede.single { max-width: 76ch; }
 
-/* TL;DR cards */
+/* TL;DR cards — clean, icon-free; an accent rule carries the visual weight */
 .tldr-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 18px 0 8px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0 8px;
 }
-.tldr { display: flex; flex-direction: column; gap: 8px; }
-.tldr-ico { font-size: 26px; line-height: 1; }
-.tldr h3 { margin: 0; font-size: 15.5px; }
+.tldr { display: flex; flex-direction: column; gap: 8px; border-top: 2px solid var(--accent); }
+.tldr h3 { margin: 0; font-size: 15.5px; color: var(--accent-bright); }
 .tldr p { margin: 0; color: var(--text-dim); font-size: 13.5px; }
 
 /* numbered chain of evidence — responsive grid of cards */
@@ -304,7 +302,7 @@ body.focus .site-footer { display: none; }
 .codeblock code { font-family: var(--mono); font-size: 13px; color: var(--accent-bright); }
 
 .callout.closing { margin-top: 40px; line-height: 2; }
-.callout.closing .btn { vertical-align: middle; margin-left: 6px; }
+.callout.closing .btn { display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; line-height: 1.2; }
 
 /* "go deeper" link cards (about) */
 .linkcard { display: block; transition: border-color .15s, background .15s, transform .05s; }
@@ -367,6 +365,10 @@ body.focus .site-footer { display: none; }
 .home-page { position: relative; z-index: 2; }
 
 .hero { text-align: center; padding: clamp(28px, 9vh, 96px) 0 30px; }
+.hero-logo {
+  height: clamp(86px, 14vw, 132px); width: auto; display: block; margin: 0 auto 22px;
+  filter: drop-shadow(0 10px 34px rgba(110, 168, 254, 0.28));
+}
 .hero h1 { font-size: clamp(32px, 6.4vw, 60px); margin: 16px 0 0; letter-spacing: -0.035em; line-height: 1.05; }
 .hero h1 .grad {
   background: linear-gradient(100deg, var(--accent-bright), #c9b8ff 55%, var(--accent));
@@ -376,6 +378,13 @@ body.focus .site-footer { display: none; }
 .hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
 .hero .btn.primary.lg { box-shadow: 0 10px 40px -12px var(--accent-glow); }
 .hero .hero-note { color: var(--text-faint); font-size: 13px; margin: 18px auto 0; }
+.hero .hero-meta {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px;
+  margin: 14px auto 0; font-size: 13px;
+}
+.hero .hero-meta a { color: var(--text-dim); }
+.hero .hero-meta a:hover { color: var(--text); }
+.hero .hero-meta .sep { color: var(--line); }
 
 .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 52px; position: relative; z-index: 2; }
 .pillar { background: color-mix(in srgb, var(--bg-1) 86%, transparent); backdrop-filter: blur(6px); }

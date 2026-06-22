@@ -45,7 +45,7 @@ export function buildShell(): Shell {
 
   const header = el('header', { class: 'site-header' }, [
     el('a', { href: '/', 'data-link': true, class: 'brand' }, [
-      el('span', { class: 'brand-mark' }),
+      el('img', { class: 'brand-logo', src: '/psi_logo.png', alt: '', width: '28', height: '19' }),
       el('span', { class: 'brand-name' }, 'PsiMeter'),
     ]),
     el('nav', { class: 'nav' }, navLinks),
@@ -55,11 +55,19 @@ export function buildShell(): Shell {
   const outlet = el('main', { class: 'site-main' });
 
   const footer = el('footer', { class: 'site-footer' }, [
-    el('span', {}, 'Open source · the experimenter is untrusted by design'),
-    el('span', { class: 'sep' }, '·'),
-    el('a', { href: '/about', 'data-link': true }, 'How verification works'),
-    el('span', { class: 'sep' }, '·'),
-    el('span', { class: 'faint' }, 'A single session is never evidence (D4/D13)'),
+    el('div', { class: 'footer-links' }, [
+      el('a', { href: '/about', 'data-link': true }, 'How it works'),
+      el('a', { href: '/docs', 'data-link': true }, 'Docs'),
+      el('a', { href: '/faq', 'data-link': true }, 'FAQ'),
+      el('a', { href: 'https://github.com/psimeter/psimeter', target: '_blank', rel: 'noopener' }, 'GitHub'),
+      el('a', { href: 'https://opencollective.com/psimeter', target: '_blank', rel: 'noopener' }, 'Open Collective'),
+      el('a', { href: 'mailto:contact@psimeter.org' }, 'contact@psimeter.org'),
+    ]),
+    el('div', { class: 'footer-note' }, [
+      el('span', {}, 'Open source · the experimenter is untrusted by design · a single session is never evidence'),
+      el('span', { class: 'sep' }, '·'),
+      el('span', { class: 'faint' }, 'MIT / CC BY 4.0'),
+    ]),
   ]);
 
   const root = el('div', { class: 'site' }, [header, outlet, footer]);

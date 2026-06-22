@@ -5,6 +5,7 @@
 
 import { el } from '../ui';
 import type { Child } from '../ui';
+import { COMING_SOON } from '../config';
 
 interface QA { q: string; a: Child[]; }
 interface Group { title: string; intro?: string; items: QA[]; }
@@ -198,7 +199,9 @@ export function renderFaq(outlet: HTMLElement): void {
       ]),
       el('div', { class: 'callout closing' }, [
         'Still curious, or found a hole? PsiMeter is open source — read the spec, the code, and the analysis script, and check any result yourself. ',
-        el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run an experiment →'),
+        COMING_SOON
+          ? el('a', { class: 'btn primary', href: '/docs', 'data-link': true }, 'Explore the documentation →')
+          : el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run an experiment →'),
       ]),
     ]),
   );

@@ -5,6 +5,7 @@
 
 import { el } from '../ui';
 import type { Child } from '../ui';
+import { COMING_SOON } from '../config';
 
 interface Step { n: string; title: string; body: Child[]; }
 
@@ -69,12 +70,12 @@ const CHAIN: Step[] = [
   },
 ];
 
-interface Tldr { ico: string; title: string; body: string; }
+interface Tldr { title: string; body: string; }
 const TLDR: Tldr[] = [
-  { ico: '🎯', title: 'What you do', body: 'It depends on the experiment: push a live stream of random bits up or down by intention, or call a target before it exists. Either way you lock your choice in first, then watch the run unfold against what chance predicts.' },
-  { ico: '🔬', title: 'The question', body: 'Whether intention alone can shift the output of a genuinely physical random process — or let you anticipate one. Researchers have studied it seriously for decades, with mixed and hotly debated results. We run the tests in public, with all data available.' },
-  { ico: '🔒', title: 'Why you can trust it', body: 'You don\'t need to take our word for it. Every result is sealed before any randomness is generated, and anyone can verify it independently from the public data — including people who assume we\'re lying.' },
-  { ico: '⚖️', title: 'What a result means', body: 'A single good run is almost certainly luck — extreme results happen by chance all the time. The real signal is whether a person beats chance, in the direction they declared, again and again.' },
+  { title: 'What you do', body: 'It depends on the experiment: push a live stream of random bits up or down by intention, or call a target before it exists. Either way you lock your choice in first, then watch the run unfold against what chance predicts.' },
+  { title: 'The question', body: 'Whether intention alone can shift the output of a genuinely physical random process — or let you anticipate one. Researchers have studied it seriously for decades, with mixed and hotly debated results. We run the tests in public, with all data available.' },
+  { title: 'Why you can trust it', body: 'You don\'t need to take our word for it. Every result is sealed before any randomness is generated, and anyone can verify it independently from the public data — including people who assume we\'re lying.' },
+  { title: 'What a result means', body: 'A single good run is almost certainly luck — extreme results happen by chance all the time. The real signal is whether a person beats chance, in the direction they declared, again and again.' },
 ];
 
 export function renderAbout(outlet: HTMLElement): void {
@@ -100,7 +101,6 @@ export function renderAbout(outlet: HTMLElement): void {
       el('h2', { class: 'about-h2' }, 'The short version'),
       el('div', { class: 'tldr-grid' }, TLDR.map((t) =>
         el('div', { class: 'tldr card' }, [
-          el('div', { class: 'tldr-ico' }, t.ico),
           el('h3', {}, t.title),
           el('p', {}, t.body),
         ]))),
@@ -199,8 +199,10 @@ export function renderAbout(outlet: HTMLElement): void {
       el('div', { class: 'callout closing' }, [
         'PsiMeter is open source — protocol, code, pre-registration, and (eventually) the full raw dataset. The point is not to be believed. The point is to be ',
         el('strong', {}, 'checked'),
-        '. Ready to try it? ',
-        el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run an experiment →'),
+        COMING_SOON ? '. The platform is launching soon — in the meantime, dig into the methodology. ' : '. Ready to try it? ',
+        COMING_SOON
+          ? el('a', { class: 'btn primary', href: '/docs', 'data-link': true }, 'Explore the documentation →')
+          : el('a', { class: 'btn primary', href: '/run', 'data-link': true }, 'Run an experiment →'),
       ]),
     ]),
   );

@@ -18,6 +18,7 @@ export function renderHome(outlet: HTMLElement): Disposer {
       veil,
       el('div', { class: 'page home-page' }, [
         el('section', { class: 'hero' }, [
+          el('img', { class: 'hero-logo', src: '/psi_logo.png', alt: 'PsiMeter', width: '512', height: '351' }),
           el('span', { class: 'eyebrow' }, 'Free · anonymous · no sign-up'),
           el('h1', {}, ['Can your mind ', el('span', { class: 'grad' }, 'beat chance'), '?']),
           el('p', { class: 'lede' },
@@ -35,6 +36,13 @@ export function renderHome(outlet: HTMLElement): Disposer {
             COMING_SOON
               ? 'The platform is launching soon. The methodology and source are open now — read how it works, then check it yourself.'
               : 'No sign-up. No app. Different experiments, one promise: make your call, then watch the live feed react.'),
+          el('p', { class: 'hero-meta' }, [
+            el('a', { href: 'https://github.com/psimeter/psimeter', target: '_blank', rel: 'noopener' }, 'GitHub'),
+            el('span', { class: 'sep' }, '·'),
+            el('a', { href: 'https://opencollective.com/psimeter', target: '_blank', rel: 'noopener' }, 'Open Collective'),
+            el('span', { class: 'sep' }, '·'),
+            el('a', { href: 'mailto:contact@psimeter.org' }, 'contact@psimeter.org'),
+          ]),
         ]),
 
         el('div', { class: 'pillars' }, [
