@@ -23,12 +23,13 @@ independently:
 
 | File | Experiment | `experimentHash` ([PSI-EXP-3]) | Primary confirmatory test |
 |------|-----------|--------------------------------|---------------------------|
-| [`osf-preregistration-micropk.md`](osf-preregistration-micropk.md) | `binary-micropk` v1 | `sha256:6b22640e…` | oriented **HIGH−LOW** Stouffer `Z* ≥ 2.5758` (one-sided α = 0.005), N = 520 + 260 baseline |
+| [`osf-preregistration-micropk.md`](osf-preregistration-micropk.md) | `binary-micropk` v1 | `sha256:6b22640e…` | oriented **HIGH−LOW** Stouffer `Z* ≥ 2.5758` (one-sided α = 0.005), N = 2060 + 300 baseline |
 | [`osf-preregistration-precognition.md`](osf-preregistration-precognition.md) | `precognition-presentiment` v1 | `sha256:6ac89421…` | **exact-binomial** hit rate > 0.5, p ≤ 0.005, N = 4 200 trials (default, `[DECISION TO CONFIRM]`) |
 
-Both bind: one-sided **α = 0.005** (Benjamin et al. 2018), **90 % power**, the **optimistic**
-effect-size posture, **fixed N / no optional stopping** (D4), and the **experimenter-not-a-subject**
-stance (D12) — see each document's §5, §10, §11.
+Both bind one-sided **α = 0.005** (Benjamin et al. 2018), **90 % power**, **fixed N / no optional
+stopping** (D4), and the **experimenter-not-a-subject** stance (D12). For effect size, micro-PK
+assumes a **conservative** ε ≈ 1×10⁻⁴ (the most defensible; N ≈ 2060); precognition uses a
+to-be-confirmed hit rate — see each document's §5, §10, §11.
 
 ## The exploratory ↔ confirmatory distinction (the crux)
 
@@ -120,6 +121,6 @@ Consistent with the project's own ethos (pre-commit, then anchor externally, D2)
 ## Status
 
 **DRAFT.** The core scientific decisions are filled in (scope = two pre-regs; α = 0.005 / 90 % power;
-optimistic effect size; experimenter-not-a-subject). Remaining open items are marked
+conservative micro-PK effect size; experimenter-not-a-subject). Remaining open items are marked
 `[DECISION NEEDED]` / `[DECISION TO CONFIRM]` inline and gather in each document's final section.
 Nothing here is registered until the checklist above is completed.

@@ -156,8 +156,8 @@ From [`experiments/binary-micropk-v1.json`](../experiments/binary-micropk-v1.jso
 
 **N below is a corpus total spread across many independent participants — it is not a per-person
 workload.** A micro-PK corpus's statistical evidence depends only on the *total* data collected, and
-that total is gathered from the whole population: N = 520 scored sessions is, for example, 520 people
-doing **one** 3-minute session each, or ~100 people doing ~5 each — **no participant spends more than
+that total is gathered from the whole population: N = 2060 scored sessions is, for example, 2060 people
+doing **one** 3-minute session each, or ~400 people doing ~5 each — **no participant spends more than
 a few minutes.** Per-person effort only becomes substantial in the *named-individual* H1 confirmation
 (§7.2), which is **voluntary**, runs **only on screened candidates**, and is **sequential** so a
 genuinely strong operator finishes early. See also §5.4 (wall-clock time is set by bit rate, not N).
@@ -171,34 +171,36 @@ platform are **excluded** from the confirmatory corpus (§9).
 
 ### 5.2 Sample size (fixed N — power analysis)
 
-**Power-analysis inputs:** target effect = the **optimistic** end of the PEAR range
-(ε ≈ 2 × 10⁻⁴ per bit); **one-sided α = 0.005** (the Benjamin et al. 2018 "redefine statistical
-significance" standard, appropriate for an extraordinary claim); **power = 0.90**. *(With per-person
-burden distributed across the population (§5.0), a more conservative — larger — N is nearly free in
-per-person terms; see the reconsideration note in §14.)*
+**Power-analysis inputs:** target effect = the **conservative** end of the PEAR range
+(ε ≈ 1 × 10⁻⁴ per bit — at or below the bottom of the canonical range, the most defensible
+assumption); **one-sided α = 0.005** (the Benjamin et al. 2018 "redefine statistical significance"
+standard, appropriate for an extraordinary claim); **power = 0.90**. *(Per-person burden is
+distributed across the population (§5.0), so this larger N costs almost nothing per participant — it
+is chosen for rigor.)*
 
 The per-session directional effect implied by a per-bit shift ε is
-`δ = E[d_i] = 2·ε·sqrt(nSamples) = 2 × (2×10⁻⁴) × sqrt(180000) ≈ 0.170` (in z units per session).
+`δ = E[d_i] = 2·ε·sqrt(nSamples) = 2 × (1×10⁻⁴) × sqrt(180000) ≈ 0.085` (in z units per session).
 For the oriented Stouffer statistic `Z* = (Σ d_i) / (σ̂₀ · sqrt(k))` (§6.1), under H1₁
 `E[Z*] = sqrt(k) · δ / σ̂₀`. With σ̂₀ ≈ 1 (the calibrated null SD, §6.3), the required
 non-centrality is `z₀.₉₉₅ + z₀.₉₀ = 2.5758 + 1.2816 = 3.8574`, giving
 
-> **k = ⌈(3.8574 / 0.170)²⌉ = 517 → rounded up to N = 520 scored sessions**, split
-> **balanced 260 `HIGH` + 260 `LOW`** (balance is required so static bias cancels, §6.1).
-> Achieved power at N = 520, ε = 2×10⁻⁴: ≈ **0.90**.
+> **k = ⌈(3.8574 / 0.085)²⌉ = 2060 scored sessions**, split **balanced 1030 `HIGH` + 1030 `LOW`**
+> (balance is required so static bias cancels, §6.1). Achieved power at N = 2060, ε = 1×10⁻⁴: ≈ **0.90**;
+> at the canonical ε = 1.5–2×10⁻⁴ the test is effectively certain (> 0.999).
 
-**Calibration corpus.** In addition, **N_baseline = 260 `BASELINE` sessions** are collected through
+**Calibration corpus.** In addition, **N_baseline = 300 `BASELINE` sessions** are collected through
 the identical pipeline (D5) to estimate the empirical null mean/SD (σ̂₀) and to run the continuous
-randomness test suites (§6.3). `BASELINE` sessions are calibration only and are **excluded** from
-the scored contrast ([PSI-PK-1]).
+randomness test suites (§6.3). Baseline size is set for calibration precision (300 × 180 000 bits pins
+the null mean to an SE well below ε), not by the power analysis; `BASELINE` sessions are **excluded**
+from the scored contrast ([PSI-PK-1]).
 
-**Reference points (not the chosen row).** At the same α = 0.005 / 90% power, smaller assumed
-effects need far more sessions — PEAR-canonical ε ≈ 1.5×10⁻⁴ (δ ≈ 0.13) → ≈ 890; conservative
-ε ≈ 1×10⁻⁴ (δ ≈ 0.085) → ≈ 2060. This is the basis of the **honest underpowered caveat** in §11.
+**Reference points (not the chosen row).** At the same α = 0.005 / 90% power, larger assumed effects
+need fewer sessions — PEAR-canonical ε ≈ 1.5×10⁻⁴ (δ ≈ 0.13) → ≈ 890; optimistic ε ≈ 2×10⁻⁴
+(δ ≈ 0.17) → ≈ 520. The conservative row is chosen for rigor; the resulting power is stated in §11.
 
 ### 5.3 Stopping rule — **none (fixed N)**
 
-Collection stops at **exactly** N = 520 scored sessions (260/260) + 260 BASELINE, in the order they
+Collection stops at **exactly** N = 2060 scored sessions (1030/1030) + 300 BASELINE, in the order they
 seal on the ledger. **There is no optional stopping and no interim peeking that affects the decision**
 (D4, [PSI-GEN-2] at the session level; pre-declared corpus N here). The confirmatory window is the
 contiguous block of qualifying sessions (§9) from the first seal after registration until N is
@@ -236,7 +238,7 @@ confirmatory bit rate therefore collects the same evidence in proportionally les
 
 ### 6.1 Primary statistic and model
 
-Let the confirmatory corpus be the `k = 520` scored `HIGH`/`LOW` sessions (§5, §9). For each,
+Let the confirmatory corpus be the `k = 2060` scored `HIGH`/`LOW` sessions (§5, §9). For each,
 compute the per-session display z and orient it ([PSI-SCORE-1], [PSI-EVALUE-1]):
 `d_i = +z_i` (`HIGH`), `d_i = −z_i` (`LOW`). The **primary statistic** is the oriented Stouffer
 combination, standardized by the calibrated null SD:
@@ -256,7 +258,7 @@ a constant generator bias by construction.
 > the single, pre-registered primary decision. Equivalently, reject iff the one-sided p-value
 > `1 − Φ(Z*) ≤ 0.005`.
 
-The decision is made **once**, on the complete N = 520 block. The point estimate (mean oriented
+The decision is made **once**, on the complete N = 2060 block. The point estimate (mean oriented
 per-session z and its two-sided 99% CI) and the implied per-bit ε are reported alongside,
 regardless of the decision.
 
@@ -264,7 +266,7 @@ regardless of the decision.
 
 The null is **empirical**, never merely theoretical (D5):
 
-1. From the 260 BASELINE sessions, estimate the null mean `μ̂₀` and SD `σ̂₀` of the per-session z.
+1. From the 300 BASELINE sessions, estimate the null mean `μ̂₀` and SD `σ̂₀` of the per-session z.
 2. **Source-validity gate (data quality, pre-registered).** If the BASELINE corpus fails the
    continuous randomness suites (NIST SP 800-22 STS / Dieharder / TestU01, D5) at their standard
    thresholds, or shows time-drift in `μ̂₀` beyond a pre-set tolerance, the confirmatory corpus is
@@ -440,7 +442,7 @@ self-verifying and the analysis is frozen, deterministic, and public.
 
 ## 11. What would falsify this — and the honest power caveat
 
-- **Confirmation of H2₁:** `Z* ≥ 2.5758` at N = 520 (§6.2). Reported with the LOO/cap robustness
+- **Confirmation of H2₁:** `Z* ≥ 2.5758` at N = 2060 (§6.2). Reported with the LOO/cap robustness
   (§6.4): a result that **fails LOO** is reported as *carried by one operator*, **not** a general
   corpus effect — which falsifies H2 *as a population claim* even if an individual effect remains for
   the H1 arm.
@@ -448,17 +450,14 @@ self-verifying and the analysis is frozen, deterministic, and public.
   Holm–Bonferroni threshold (§7) — evidence a *specific person* carries the effect. A flagged
   candidate who **fails** replication has that H1 claim **disconfirmed** (the expected outcome if the
   flag was chance).
-- **The honest underpowered caveat (a feature, not a footnote — D13).** N = 520 is powered for the
-  **optimistic** effect (ε = 2×10⁻⁴). If the true effect is smaller, a **null is inconclusive, not
-  disconfirming**:
-  - at the PEAR-canonical ε = 1.5×10⁻⁴, power at N = 520 ≈ **0.63**;
-  - at the conservative ε = 1×10⁻⁴, power at N = 520 ≈ **0.26**.
-  So a null result here **disconfirms an effect of the assumed size or larger**, and does **not**
-  rule out a smaller effect. To make a null *disconfirm the canonical effect* (the "disprove at
-  scale" goal), pre-register an extension to the conservative N (≈ 2060 sessions) and/or a
-  **TOST equivalence test** against a smallest-effect-of-interest
-  **`[DECISION NEEDED: register an equivalence bound / extension-to-conservative-N, or accept that a
-  null at N=520 is only "no optimistic-size effect"]`**.
+- **The honest power statement (a feature, not a footnote — D13).** N = 2060 is powered (≥ 0.90) for
+  the **conservative** ε = 1×10⁻⁴ — at or below the bottom of the canonical PEAR range — and is
+  effectively certain (> 0.999 power) to detect the canonical ε = 1.5–2×10⁻⁴. So a **null at N = 2060
+  disconfirms any effect ≥ 1×10⁻⁴**; only a *sub-canonical* effect would escape it (ε < 1×10⁻⁴,
+  δ < 0.085 — e.g. power ≈ **0.26** at ε = 0.5×10⁻⁴). To probe even smaller effects, pre-register a
+  larger-N extension and/or a **TOST equivalence test** against a smallest-effect-of-interest
+  **`[DECISION NEEDED: register a larger-N extension / TOST equivalence bound to probe sub-1×10⁻⁴
+  effects, or accept that a null at N = 2060 means "no effect ≥ 1×10⁻⁴"]`**.
 - **Source-validity falsifier.** If the BASELINE corpus fails the randomness suites or drifts
   (§6.3), the run is invalidated as a *source* fault — explicitly **not** counted as evidence either
   way.
@@ -500,7 +499,7 @@ untrusted-experimenter axiom, spec §3.1).
    ([PSI-SCORE-1]).
 4. **How many and which conditions?**
    Three pre-committed conditions: **HIGH**, **LOW**, **BASELINE** ([PSI-PK-1]); the scored contrast
-   is HIGH vs LOW (balanced 260/260), BASELINE is calibration only.
+   is HIGH vs LOW (balanced 1030/1030), BASELINE is calibration only.
 5. **Specify exactly the analyses for the main hypothesis.**
    Oriented Stouffer `Z* = (Σ d_i)/(σ̂₀·√k)`, `d_i = +z` (HIGH) / `−z` (LOW), `σ̂₀` from the BASELINE
    corpus; **reject H2₀ iff `Z* ≥ 2.5758`** (one-sided α = 0.005). Secondary: LOO + per-operator cap;
@@ -510,8 +509,8 @@ untrusted-experimenter axiom, spec §3.1).
    dev-beacon, `os`-entropy, un-witnessed (once required), wrong-`experimentHash`, or
    verification-failing sessions; and any experimenter-role sessions (D12). See §8–§9.
 7. **Sample size / how N is determined.**
-   **Fixed N = 520 scored sessions (260 HIGH + 260 LOW) + 260 BASELINE.** From a power analysis at
-   one-sided α = 0.005, 90% power, optimistic ε = 2×10⁻⁴ (δ ≈ 0.170/session). **No optional
+   **Fixed N = 2060 scored sessions (1030 HIGH + 1030 LOW) + 300 BASELINE.** From a power analysis at
+   one-sided α = 0.005, 90% power, conservative ε = 1×10⁻⁴ (δ ≈ 0.085/session). **No optional
    stopping** (D4); the primary test is computed once on the complete block.
 8. **Anything else being pre-registered?**
    The two-tier H1 plan (§7 — population reliability + a sequential, anytime-valid named-individual confirmation, e-BH across candidates); the baseline source-validity gate
@@ -533,11 +532,8 @@ These are flagged inline above; collected here for the registration checklist:
 - `[DECISION NEEDED]` **N_max cap** for the sequential named-individual confirmation (recommended
   1000 sessions) (§7.2).
 - `[DECISION NEEDED]` **Confirmatory bit rate** / whether to test bit rate as a factor (§5.4).
-- `[DECISION TO RECONSIDER]` Now that per-person burden is distributed (§5.0), whether to set the
-  **H2 effect-size assumption to conservative** (≈ 2060 sessions — more defensible, still trivial per
-  person) rather than optimistic (§5.2, §11).
-- `[DECISION NEEDED]` Whether to also register a **conservative-N extension and/or TOST equivalence
-  bound** so a null can *disconfirm* the canonical effect (§11).
+- `[DECISION NEEDED]` Whether to register a **larger-N extension and/or TOST equivalence bound** so a
+  null can disconfirm *sub-canonical* (< 1×10⁻⁴) effects (§11).
 - `[DECISION NEEDED]` **Embargo:** default is **none** (open by default, RATIONALE design pillar 7;
   the public dataset is released for the paper). OSF permits an embargo of up to 4 years if desired.
 - `[DECISION NEEDED]` The **released protocol version** to bind (not the current `0.1.0-draft`).
