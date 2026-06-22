@@ -229,9 +229,10 @@ body.focus .site-footer { display: none; }
 .section-lede { max-width: 76ch; color: var(--text-dim) !important; margin: 0 0 22px; font-size: clamp(14px, 1.8vw, 16px); }
 .section-lede.single { max-width: 76ch; }
 
-/* TL;DR cards — clean, icon-free; an accent rule carries the visual weight */
+/* TL;DR cards — clean, icon-free; an accent rule carries the visual weight.
+   A balanced 2×2 (not auto-fit) so the four cards never orphan one on its own row. */
 .tldr-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0 8px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 18px 0 8px;
 }
 .tldr { display: flex; flex-direction: column; gap: 8px; border-top: 2px solid var(--accent); }
 .tldr h3 { margin: 0; font-size: 15.5px; color: var(--accent-bright); }
@@ -659,6 +660,9 @@ textarea.fld { resize: vertical; }
   .guarantees dd { padding-top: 4px; }
   .rung { grid-template-columns: 1fr; gap: 8px; }
   .rung-tag { justify-self: start; }
+
+  /* about: the 2×2 short-version cards stack to a single column */
+  .tldr-grid { grid-template-columns: 1fr; }
 }
 
 /* ====================================================================
