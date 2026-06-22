@@ -6,6 +6,7 @@
 import { el } from '../ui';
 import type { Disposer } from '../router';
 import { NetworkBackground } from '../viz/network-bg';
+import { COMING_SOON } from '../config';
 
 export function renderHome(outlet: HTMLElement): Disposer {
   const canvas = el('canvas', { class: 'home-bg', 'aria-hidden': 'true' });
@@ -21,12 +22,19 @@ export function renderHome(outlet: HTMLElement): Disposer {
           el('h1', {}, ['Can your mind ', el('span', { class: 'grad' }, 'beat chance'), '?']),
           el('p', { class: 'lede' },
             'PsiMeter is an open platform of experiments built around one old, unsettled question: can a person, by intention alone, influence — or foresee — a genuinely physical random process? The randomness is real (quantum and thermal noise, not a pseudo-random algorithm), and every result is sealed before it exists, so anyone can check it. Pick an experiment and find out.'),
-          el('div', { class: 'cta-row' }, [
-            el('a', { class: 'btn primary lg', href: '/experiments', 'data-link': true }, 'Pick an experiment →'),
-            el('a', { class: 'btn lg ghost', href: '/about', 'data-link': true }, 'How it works'),
-          ]),
+          COMING_SOON
+            ? el('div', { class: 'cta-row' }, [
+                el('a', { class: 'btn primary lg', href: '/about', 'data-link': true }, 'How it works →'),
+                el('a', { class: 'btn lg ghost', href: '/docs', 'data-link': true }, 'Read the docs'),
+              ])
+            : el('div', { class: 'cta-row' }, [
+                el('a', { class: 'btn primary lg', href: '/experiments', 'data-link': true }, 'Pick an experiment →'),
+                el('a', { class: 'btn lg ghost', href: '/about', 'data-link': true }, 'How it works'),
+              ]),
           el('p', { class: 'hero-note' },
-            'No sign-up. No app. Different experiments, one promise: make your call, then watch the live feed react.'),
+            COMING_SOON
+              ? 'The platform is launching soon. The methodology and source are open now — read how it works, then check it yourself.'
+              : 'No sign-up. No app. Different experiments, one promise: make your call, then watch the live feed react.'),
         ]),
 
         el('div', { class: 'pillars' }, [

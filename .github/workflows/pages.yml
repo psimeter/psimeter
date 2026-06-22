@@ -1,0 +1,72 @@
+# Build the PsiMeter public "coming soon" site (the Vite client in its
+# VITE_COMING_SOON mode) and deploy it to GitHub Pages at psimeter.org.
+#
+# The interactive, server-backed features are gated behind a launch notice by
+# the build flag; the how-it-works and documentation pages ship in full. The
+# custom domain is set by packages/client/public/CNAME (copied into the build
+# output), and index.html is duplicated to 404.html so the SPA's clean-URL deep
+# links resolve on Pages.
+#
+# One-time setup: in the repo's Settings → Pages, set "Build and deployment →
+# Source" to "GitHub Actions".
+
+name: Deploy public site (Pages)
+
+on:
+  push:
+    branches: [website]
+  workflow_dispatch:
+
+# Allow the deploy job to publish to Pages via OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One concurrent deploy; let an in-progress run finish (don't cancel a publish).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build core (client depends on its built dist)
+        run: npm run build:core
+
+      - name: Build public site (coming-soon mode)
+        run: npm run build:client
+        env:
+          VITE_COMING_SOON: '1'
+
+      - name: Add SPA fallback for clean-URL deep links
+        run: cp packages/client/dist/index.html packages/client/dist/404.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

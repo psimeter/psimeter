@@ -5,6 +5,7 @@
 import { el } from './ui';
 import { getOperatorPubKey, shortId } from './identity';
 import { fetchPsi } from './api';
+import { COMING_SOON } from './config';
 
 export interface Shell {
   root: HTMLElement;
@@ -12,7 +13,7 @@ export interface Shell {
   setActive(path: string): void;
 }
 
-const NAV: ReadonlyArray<{ href: string; label: string }> = [
+const NAV_FULL: ReadonlyArray<{ href: string; label: string }> = [
   { href: '/experiments', label: 'Experiments' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/about', label: 'How it works' },
@@ -20,25 +21,27 @@ const NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: '/faq', label: 'FAQ' },
 ];
 
+// The public "coming soon" build hides the server-backed sections, leaving the
+// how-it-works and documentation pages that work without a backend.
+const NAV_SOON: ReadonlyArray<{ href: string; label: string }> = [
+  { href: '/about', label: 'How it works' },
+  { href: '/docs', label: 'Docs' },
+  { href: '/faq', label: 'FAQ' },
+];
+
+const NAV = COMING_SOON ? NAV_SOON : NAV_FULL;
+
 export function buildShell(): Shell {
   const navLinks = NAV.map((n) =>
     el('a', { href: n.href, 'data-link': true, 'data-path': n.href }, n.label),
   );
 
-  // The chip doubles as the always-visible score (gamification) and the link to
-  // the player's profile. The score badge fills in once the key + psi load.
-  const scoreBadge = el('span', { class: 'chip-score tier-0' }, 'ψ –');
-  const chipId = el('span', { class: 'chip-id' }, '…');
-  const chip = el(
-    'a',
-    {
-      class: 'identity-chip',
-      href: '/profile',
-      'data-link': true,
-      title: 'Your profile — score, history, and ranking, tied to this browser key',
-    },
-    [scoreBadge, chipId],
-  );
+  // Live build: the identity chip is the always-visible score and the link to
+  // the player's profile. Coming-soon build: there's no live score or profile,
+  // so it becomes a simple "launching soon" badge.
+  const chip = COMING_SOON
+    ? el('span', { class: 'soon-badge', title: 'The interactive platform is not live yet' }, 'Launching soon')
+    : buildIdentityChip();
 
   const header = el('header', { class: 'site-header' }, [
     el('a', { href: '/', 'data-link': true, class: 'brand' }, [
@@ -61,8 +64,36 @@ export function buildShell(): Shell {
 
   const root = el('div', { class: 'site' }, [header, outlet, footer]);
 
-  // Fill the identity chip once the key is derived (async WebCrypto), then load
-  // the live score so it shows in the header on every page.
+  function setActive(path: string): void {
+    for (const a of navLinks) {
+      const target = a.getAttribute('data-path');
+      // The Docs link owns the whole /docs/* subtree; others match exactly.
+      const isActive = target === '/docs' ? path.startsWith('/docs') : target === path;
+      a.classList.toggle('active', isActive);
+    }
+    chip.classList.toggle('active', path === '/profile' || path === '/history');
+  }
+
+  return { root, outlet, setActive };
+}
+
+// The identity chip (live build): the always-visible psi score plus a link to
+// the player's profile. The score fills in once the in-browser key is derived
+// (async WebCrypto) and the live score loads.
+function buildIdentityChip(): HTMLElement {
+  const scoreBadge = el('span', { class: 'chip-score tier-0' }, 'ψ –');
+  const chipId = el('span', { class: 'chip-id' }, '…');
+  const chip = el(
+    'a',
+    {
+      class: 'identity-chip',
+      href: '/profile',
+      'data-link': true,
+      title: 'Your profile — score, history, and ranking, tied to this browser key',
+    },
+    [scoreBadge, chipId],
+  );
+
   void getOperatorPubKey()
     .then(async (pub) => {
       chipId.textContent = `${shortId(pub)}…`;
@@ -75,15 +106,5 @@ export function buildShell(): Shell {
     })
     .catch(() => { chipId.textContent = 'key error'; });
 
-  function setActive(path: string): void {
-    for (const a of navLinks) {
-      const target = a.getAttribute('data-path');
-      // The Docs link owns the whole /docs/* subtree; others match exactly.
-      const isActive = target === '/docs' ? path.startsWith('/docs') : target === path;
-      a.classList.toggle('active', isActive);
-    }
-    chip.classList.toggle('active', path === '/profile' || path === '/history');
-  }
-
-  return { root, outlet, setActive };
+  return chip;
 }
