@@ -18,7 +18,7 @@ claims. They are deliberately **separate** from the protocol specification:
 
 ## The two registrations
 
-The owner chose **two separate OSF registrations** (one per experiment paradigm), registered
+This project registers **two separate OSF registrations** (one per experiment paradigm),
 independently:
 
 | File | Experiment | `experimentHash` ([PSI-EXP-3]) | Primary confirmatory test |
@@ -54,7 +54,7 @@ artifacts** — trusting neither the server nor its code (spec §3.1):
 
 ---
 
-## Registering on OSF (a manual external step the owner performs)
+## Registering on OSF (a manual external step performed by the registrant)
 
 Registering on **osf.io** cannot be done from this repo — it is a manual step that creates the
 frozen, timestamped artifact. Recommended order:
@@ -62,8 +62,8 @@ frozen, timestamped artifact. Recommended order:
 ### A. Before you register
 1. **Resolve the `[DECISION NEEDED]` / `[DECISION TO CONFIRM]` items** in each pre-reg (collected in
    each document's final section): the independent lead analyst (§10), the per-operator cap and
-   `N_rep` cap, the precognition hit-rate row, any equivalence/extension test, the embargo, and the
-   ethics/IRB status (precognition, D7).
+   `N_max` cap, the precognition hit-rate row, any equivalence/extension test, the micro-PK bit-rate
+   choice, the embargo, and the ethics/IRB status (precognition, D7).
 2. **Freeze the immutable inputs** (a confirmatory registration must bind *released*, not draft,
    artifacts):
    - the **protocol version** — release `spec/psimeter-protocol.md` past `0.1.0-draft` and cite that
@@ -119,7 +119,7 @@ Consistent with the project's own ethos (pre-commit, then anchor externally, D2)
 
 ## Status
 
-**DRAFT.** The scientific decisions the owner has made are filled in (scope = two pre-regs;
-α = 0.005 / 90 % power; optimistic effect size; experimenter-not-a-subject). Remaining open items are
-marked `[DECISION NEEDED]` / `[DECISION TO CONFIRM]` inline and gather in each document's final
-section. Nothing here is registered until the owner completes the checklist above.
+**DRAFT.** The core scientific decisions are filled in (scope = two pre-regs; α = 0.005 / 90 % power;
+optimistic effect size; experimenter-not-a-subject). Remaining open items are marked
+`[DECISION NEEDED]` / `[DECISION TO CONFIRM]` inline and gather in each document's final section.
+Nothing here is registered until the checklist above is completed.

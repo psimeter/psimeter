@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | **Title** | Can people anticipate the emotional valence of a not-yet-determined image? A pre-registered, fixed-N, cryptographically auditable confirmatory test (forced-choice presentiment) |
-| **Authors** | Adler Oliveira — PsiMeter instrument & protocol author. *(See §10: the author is **not** enrolled as a confirmatory subject. `[DECISION NEEDED: named independent lead analyst / co-author]` — see §10.)* |
+| **Authors** | Adler Oliveira. *(Independent lead analyst / co-signer invited — see §10; `[DECISION NEEDED]`.)* |
 | **Draft date** | 2026-06-21 |
 | **Registration status** | **DRAFT — not yet registered on OSF.** Registration is a manual external step; see the checklist in [`prereg/README.md`](README.md). |
 | **Experiment** | `precognition-presentiment` **v1** (`precognition-presentiment`) — [`experiments/precognition-presentiment-v1.json`](../experiments/precognition-presentiment-v1.json) |
@@ -39,8 +39,9 @@ PsiMeter runs in two phases (RATIONALE §5, "Two-phase architecture"); this regi
   stopping** (D4, [PSI-GEN-2]), one primary outcome, one primary test, a pre-set α, and an explicit
   accept/reject rule, registered **before** the confirmatory data are generated.
 
-The headline confirmatory arm is the **corpus hit-rate test (H2)** in §6; the **candidate-replication
-test (H1)** in §7 is the per-operator confirmatory arm that an exploratory "Candidate" flag triggers.
+The headline confirmatory arm is the **corpus hit-rate test (H2)** in §6; the **individual-ability
+tests (H1)** in §7 (a low-burden population signature plus a sequential per-candidate confirmation)
+are the per-operator confirmatory arm an exploratory "Candidate" flag triggers.
 
 ### 1.2 Background
 
@@ -149,6 +150,15 @@ pinned by `experimentHash = sha256:6ac89421…` ([PSI-EXP-3]). Any change bumps 
 
 ## 5. Sampling plan & stopping rule
 
+### 5.0 Unit of analysis — the corpus, not the person (read this first)
+
+**N below is a corpus total spread across many independent participants — it is not a per-person
+workload.** A presentiment corpus's evidence is gathered from the whole population: the default
+N = 4 200 trials = 210 sessions is, for example, 210 people doing **one** ≈ 2-minute session each, or
+~40 people doing ~5 each — **no participant spends more than a few minutes.** Per-person effort only
+becomes substantial in the *named-individual* H1 confirmation (§7.2), which is **voluntary**, runs
+**only on screened candidates**, and is **sequential** so a genuinely strong operator finishes early.
+
 ### 5.1 Existing data
 
 **No confirmatory data have been collected.** Confirmatory collection begins **only after** this
@@ -157,8 +167,9 @@ registration is frozen/timestamped on OSF and the protocol version + analysis sc
 
 ### 5.2 Sample size (fixed N — power analysis)
 
-**Decision recorded by the owner:** **one-sided α = 0.005** (the Benjamin et al. 2018 standard) and
-**power = 0.90**; the owner selected the **optimistic** effect-size posture (smallest N).
+**Power-analysis inputs:** **one-sided α = 0.005** (the Benjamin et al. 2018 standard), **power = 0.90**,
+and the **optimistic** effect-size posture (smallest N). *(Per-person burden is distributed across the
+population (§5.0), so a more conservative — larger — N is nearly free in per-person terms.)*
 
 For a per-trial hit-rate excess `h` (true rate `0.5 + h`), the corpus hit-rate test statistic has
 `E[z] = 2·h·sqrt(N_trials)`, so `N_trials = (3.8574 / (2h))²` for α = 0.005 / 90% power. At 20
@@ -175,7 +186,7 @@ trials/session:
 > optimistic-but-defensible forced-choice benchmark (≈ Bem 2011 scale). Achieved power at this N and
 > 53 % ≈ **0.90**.
 
-> `[DECISION TO CONFIRM]` The owner's "optimistic" choice was elicited in **micro-PK** terms; for a
+> `[DECISION TO CONFIRM]` The "optimistic" posture was set in **micro-PK** terms; for a
 > 2-AFC precognition task the high end (55 %) needs only ~75 sessions but is arguably too generous to
 > *assume*, while 52 % / 51 % are more conservative (larger N). **Confirm the row** (default: 53 %)
 > before freezing. The fixed N is whatever this row sets; **no optional stopping** (§5.3).
@@ -225,27 +236,51 @@ equivalent summaries.
   agree.
 - **Leave-one-operator-out (LOO)** and a **per-operator cap** `[DECISION NEEDED: cap C — recommend
   C = 20 sessions]`, so no single heavy/fraudulent operator drives the result (RATIONALE §5/H2).
-- **Owner exclusion (D12):** the author's operator sessions, if any, are excluded a priori (§10).
+- **Experimenter exclusion (D12):** any operator key used by the experimenter role is excluded a priori (§10).
 
 ---
 
-## 7. Analysis plan — candidate-replication test (H1, secondary confirmatory arm)
+## 7. Analysis plan — individual-ability tests (H1)
 
-- **Trigger.** An operator flagged **Candidate** by the exploratory psi score (`W ≥ 1000` and `≥ 5`
-  scored sessions, [PSI-EVALUE-4]); screening is **never** confirmatory (D4, D15).
-- **Replication (fixed N_rep, no optional stopping).** The candidate completes a pre-registered block
-  of **N_rep** sessions under the same hash-bound `precognition-presentiment` v1. `N_rep` is fixed
-  **before** the first replication session by the frozen power rule (90 % power, α = 0.005) from the
-  **conservative lower 50%-CI bound** of the candidate's *screened* hit-rate excess `ĥ`, i.e.
-  `N_rep_trials = ⌈(3.8574 / (2·ĥ_lo))²⌉`, capped at a pre-registered maximum
-  `[DECISION NEEDED: N_rep cap — recommend 12 000 trials = 600 sessions]`, and written into the
-  ledger before any data.
-- **Primary test (per candidate).** Within-operator **exact binomial** hit rate > 0.5 over the
-  replication block only; reject that candidate's H1₀ iff it clears the **Holm–Bonferroni-adjusted**
-  one-sided α = 0.005 across the family of all candidate replications in the confirmatory window
-  (the *method* is pre-registered; the candidate count is not known in advance).
-- **Consistency check (secondary).** Split-half / test–retest reliability within the replication
-  block (RATIONALE §5/H1).
+Two H1 analyses are registered, split by per-participant burden: the **population** question (§7.1)
+needs only a few short sessions per person, and the per-person **named-individual** test (§7.2) is
+voluntary, screened, and sequential so genuine ability confirms early.
+
+### 7.1 Population signature — do reliable individual differences exist? (low burden)
+
+Across all confirmatory participants with `≥ 2` scored sessions (≈ 2 minutes each):
+
+- **Test–retest reliability.** Split each operator's sessions in half by seal order and correlate the
+  operator's hit rate across halves; a stable ability ⇒ positive correlation (RATIONALE §5/H1).
+- **Variance components.** Fit a random-effects model to per-session hit counts and test whether the
+  **between-operator variance exceeds** the exact Binomial(0.5) chance expectation (the null is
+  exact, §6.1 — no calibration needed).
+- **Decision:** one-sided α = 0.005. This answers *"do stable individual differences exist?"* at the
+  population level **without any single person doing more than a handful of 2-minute sessions.**
+
+### 7.2 Named-individual confirmation — sequential / anytime-valid (bounded, stops early)
+
+- **Trigger.** An operator flagged **Candidate** by the *exploratory* screening psi score (`W ≥ 1000`
+  and `≥ 5` scored sessions, [PSI-EVALUE-4]); screening is never itself confirmatory (D4, D15).
+- **Test — the same e-value, now confirmatory.** Accumulate the test-martingale wealth `W`
+  ([PSI-EVALUE-2]; precognition's hit-rate z is already oriented, [PSI-EVALUE-1]) over the candidate's
+  **witnessed, confirmatory-condition** replication sessions only (screening excluded), with the
+  mixture grid **and** threshold **pinned into the hash-bound definition** ([PSI-EVALUE] note,
+  [PSI-WITNESS-5]).
+- **Decision (anytime-valid).** **Reject that candidate's H1₀ the first time `W ≥ 1/α = 200`**
+  (one-sided α = 0.005). By **Ville's inequality** this holds the false-positive rate at α under
+  continuous monitoring and early stopping, so the candidate may stop the instant evidence suffices.
+  > *Not the optional stopping D4 forbids:* D4 bans unprincipled stopping of a **fixed-N** test; an
+  > anytime-valid e-value is the principled construction that makes stopping legitimate (the property
+  > the screening score already relies on). Here the data are **witnessed/controlled**, the threshold
+  > is **pre-committed**, and the operator is a **single pre-specified person**.
+- **Bounded effort.** A pre-registered **maximum `N_max`** caps effort and Type II error: if
+  `W < 200` at `N_max`, the candidate is **not confirmed**. Because candidates are screened for a
+  *large* apparent hit rate, the expected number of trials to cross the threshold is far below the
+  cap. `[DECISION NEEDED: N_max cap — recommend 12 000 trials = 600 sessions as the worst-case bound]`.
+- **Multiple candidates.** Control the false-discovery rate with **e-BH** (Wang–Ramdas
+  e-Benjamini–Hochberg over the terminal e-values), or Holm–Bonferroni on the anytime-valid p-values
+  `min(1, 1/W)`.
 
 ---
 
@@ -289,7 +324,7 @@ checkable; §12):
 - Any session failing the §8 gate (incomplete, dev-beacon, un-witnessed once required, or
   verification-failing) — mechanical, not a judgment call.
 - Sessions under any `experimentHash` other than `sha256:6ac89421…` ([PSI-EXP-4]).
-- The author's operator sessions, if any (§10, D12).
+- Any sessions from operator keys used by the experimenter role (§10, D12).
 
 ### 9.2 Missing / invalid data
 
@@ -308,38 +343,42 @@ no imputation; N is the count of *fully valid sealed* sessions.
 | **Optional stopping** | Fixed trials/session ([PSI-GEN-2]) and fixed corpus N (§5.3); the only anytime-valid object (psi score) is exploratory-only ([PSI-EVALUE-2]). |
 | **Multiple comparisons** | One primary test (§6.2); leaderboard ≠ evidence (D4); candidate replications use Holm–Bonferroni (§7). |
 | **Untrusted experimenter** | Integrity path: re-computation from public artifacts (§3.2/§14), not trust — see §12. |
-| **Experimenter-as-subject (D12)** | Author does not enrol (§10); LOO + per-operator cap (§6.3). |
+| **Experimenter-as-subject (D12)** | The experimenter role is barred from the confirmatory subject pool (§10); LOO + per-operator cap (§6.3). |
 | **Sybil / multi-key** | Screening-only; answered by the confirmatory phase + optional stronger identity for candidates (D6/D9). |
 
 ---
 
-## 10. The experimenter-as-subject question (D12) and the analyst role
+## 10. Experimenter / subject separation (D12) and the analyst role
 
-**Owner's decision (recorded).** The project author **will not enrol as a confirmatory test
-subject** — the strongest form of the D12 safeguard, chosen to keep the project neutral and avoid
-inviting skepticism. If the author uses the public platform at all, it is **exploratory-firehose
-only**, and that operator key is **pre-declared and excluded from every confirmatory analysis**
-(§9.1).
+**The experimenter is not a confirmatory subject.** Confirmatory data are collected only from
+independent public participants. Anyone in the **experimenter role** — operating the instrument, its
+servers, witnesses, or infrastructure — is excluded from the confirmatory subject pool, and any such
+operator key is pre-declared and excluded a priori (§9.1). This is the strongest form of the D12
+safeguard (total experimenter/subject separation): it removes the "PEAR Operator 10" risk from the
+headline entirely, and — being a **structural rule about a role** — it holds no matter who fills that
+role, so the result stands even if the instrument is later run by someone else or the work is
+published anonymously.
 
-**Recommended analyst posture (the author deferred this choice).** The recommendation leans on a
-structural fact: the confirmatory result does **not** depend on trusting whoever runs the analysis,
-because it is a **deterministic, open script over public data** (integrity/statistical path
-separation, spec §3.2; [PSI-VERIFY-9]). Concretely:
+**The analyst is not a trusted role either.** Every confirmatory number is produced by an open,
+deterministic script (`analysis/analyze.py`) run over the **public** ledger, so its output does not
+depend on who runs it (integrity/statistical-path separation, spec §3.2; [PSI-VERIFY-9]). To remove
+any post-hoc latitude:
 
-1. **Freeze and hash-anchor the analysis pipeline before collection** — pin the exact
-   `analysis/analyze.py` (git commit SHA + a SHA-256 of the script) and this decision rule, anchored
-   into the ledger alongside the OSF DOI (§13), so the analysis has **no post-hoc degrees of freedom**
-   (mirroring D13 and the pinning of the psi grid / witness set, [PSI-EVALUE], [PSI-WITNESS-5]). The
-   confirmatory number is then *whatever the pre-registered script outputs over the public ledger*,
-   re-runnable by anyone ([PSI-VERIFY-9], §12).
-2. **Openly invite an independent lead analyst / co-signer** to co-sign the freeze, be the nominal
-   lead analyst, and co-hold the ledger anchors (D12). This **strengthens** credibility but is **not
-   a blocker**, because step 1 already makes the result mechanically reproducible.
-   `[DECISION NEEDED: name the independent lead analyst, or register with the open invitation
-   standing and add by amendment before confirmatory collection.]`
+1. **Freeze and hash-anchor the analysis pipeline before collection** — pin the exact `analyze.py`
+   (git commit SHA + a file hash) and this decision rule, and anchor them into the ledger alongside
+   the OSF DOI (§13), mirroring the experiment-definition discipline (D13) and the pinning of the psi
+   grid / witness set ([PSI-EVALUE] note, [PSI-WITNESS-5]). After the freeze, the confirmatory number
+   is simply *whatever the pre-registered script outputs over the public ledger* — re-runnable by
+   anyone ([PSI-VERIFY-9], §12).
+2. **An independent lead analyst / co-signer is invited** to co-sign the freeze, hold the
+   lead-analyst role, and co-hold the ledger anchors (D12). This strengthens credibility but is **not
+   required for validity**, because step 1 already makes every number mechanically reproducible.
+   `[DECISION NEEDED: name an independent lead analyst, or register with the invitation standing and
+   add by amendment before confirmatory collection.]`
 
-This is the **honest-frontier** posture (consistent with the witness N = 1 story, spec §15): the
-headline does not rest on trusting the experimenter even at N = 1.
+This mirrors the witness design's honest frontier (spec §15): strength on the human-independence axis
+grows as others participate, but the headline never rests on trusting any individual — the chain is
+self-verifying and the analysis is frozen, deterministic, and public.
 
 ---
 
@@ -395,18 +434,18 @@ trusting neither the server nor its code (spec §3.1):
    `p₀ = 0.5`); 20 trials/session.
 5. **Specify exactly the analyses for the main hypothesis.**
    One-sided **exact binomial test** of `hits ~ Binomial(trials, 0.5)` vs hit rate > 0.5; **reject
-   H2₀ iff p ≤ 0.005**. Secondary: per-operator clustering, LOO, cap; the candidate-replication arm
+   H2₀ iff p ≤ 0.005**. Secondary: per-operator clustering, LOO, cap; the individual-ability arm
    (§7).
 6. **Outliers and exclusions.**
    No value-based outliers (counts are exact). Mechanical exclusions only: incomplete, dev-beacon,
    un-witnessed (once required), wrong-`experimentHash`, or verification-failing sessions/trials; and
-   the author's sessions (D12). See §8–§9.
+   any experimenter-role sessions (D12). See §8–§9.
 7. **Sample size / how N is determined.**
    **Fixed N** (default **4 200 trials = 210 sessions**) from a power analysis at one-sided
    α = 0.005, 90 % power, assumed 53 % hit rate (`[DECISION TO CONFIRM]`, §5.2). **No optional
    stopping** (D4); the primary test is computed once on the complete block.
 8. **Anything else being pre-registered?**
-   The H1 candidate-replication protocol (§7); robustness/clustering analyses (§6.3); the honest
+   The two-tier H1 plan (§7 — population reliability + a sequential, anytime-valid named-individual confirmation, e-BH across candidates); robustness/clustering analyses (§6.3); the honest
    underpowered caveat / optional equivalence extension (§11); the content-warning consent gate and
    pending ethics review (D7); and that every result — including the full beacon→pixels→valence→hit
    chain — is re-verifiable from public artifacts (§12).
@@ -421,8 +460,8 @@ trusting neither the server nor its code (spec §3.1):
 - `[DECISION TO CONFIRM]` The **assumed hit rate / N row** (default 53 % → 210 sessions) (§5.2).
 - `[DECISION NEEDED]` Named **independent lead analyst / co-signer**, or register with the open
   invitation standing (§10).
-- `[DECISION NEEDED]` Per-operator **cap C** (recommended 20) (§6.3) and **N_rep cap** for candidate
-  replications (recommended 600 sessions) (§7).
+- `[DECISION NEEDED]` Per-operator **cap C** (recommended 20) (§6.3) and **N_max cap** for the
+  sequential named-individual confirmation (recommended 600 sessions) (§7.2).
 - `[DECISION NEEDED]` Whether to register a **larger-N extension and/or TOST equivalence bound** so a
   null can *disconfirm* a small effect (§11).
 - `[DECISION NEEDED]` **Ethics/IRB status** and informed-consent screen (D7) before the confirmatory
