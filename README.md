@@ -1,10 +1,23 @@
-# PsiMeter
+<p align="center">
+  <img src="https://psimeter.org/psi_logo.png" alt="PsiMeter logo" width="150" />
+</p>
 
-**Can human intention influence a true random number generator? Can people anticipate future random outcomes better than chance?**
+<h1 align="center">PsiMeter</h1>
+
+<p align="center">
+  <strong>Can human intention influence a true random number generator?<br />
+  Can people anticipate future random outcomes better than chance?</strong>
+</p>
+
+<p align="center">
+  →&nbsp;<a href="https://psimeter.org"><strong>psimeter.org</strong></a>&nbsp;·
+  <a href="https://github.com/psimeter/psimeter">github.com/psimeter/psimeter</a>&nbsp;·
+  <a href="https://opencollective.com/psimeter">Support the project</a>
+</p>
+
+---
 
 These are real scientific questions — and PsiMeter is built to answer them properly. It is an open-source platform for running large-scale, anonymous, web-based experiments that test for putative psi effects, designed from the ground up so that neither the experimenter nor anyone else has to be trusted.
-
-→ **[psimeter.org](https://psimeter.org)** · [github.com/psimeter/psimeter](https://github.com/psimeter/psimeter) · [Support the project](https://opencollective.com/psimeter)
 
 ---
 
