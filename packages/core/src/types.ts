@@ -1,9 +1,10 @@
 /**
  * Shared domain types.
  *
- * This module is the current cross-language "source of truth" for the data
- * contracts described in docs/SPECIFICATION.md §8; JSON Schemas under `schema/`
- * will be generated from it later.
+ * This module is the implementing source for the data contracts whose normative
+ * definitions live in the spec (`spec/psimeter-protocol.md` §6 experiment
+ * definitions, §9 ledger, §13 witnesses). Published JSON Schemas (Draft 2020-12)
+ * mirror these types under `schema/` and are checked by `python schema/check.py`.
  */
 
 /** Intention declared before a micro-PK run (spec D3 — tripolar protocol). */

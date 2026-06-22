@@ -336,6 +336,8 @@ different hash (`sha256:0a9e21cf…`), partitioning the corpus.
 
 *Reference:* [`experiment.ts`](../packages/core/src/experiment.ts).
 *Test vectors:* [`test-vectors/experiment.json`](test-vectors/experiment.json).
+*Schema:* [`../schema/experiment-definition.schema.json`](../schema/experiment-definition.schema.json)
+(Draft 2020-12; intentionally open per [PSI-EXP-4] — see [`schema/README.md`](../schema/README.md)).
 
 ## 7. Pre-commitment and anchor
 
@@ -528,8 +530,12 @@ metadata}`, recorded verbatim, §10); `serverNonce`; and `precommit` and `anchor
 TSA / git / OpenTimestamps); `witness.anchor` entries cross-bind the witness feed head (§13).
 
 *Reference:* [`ledger.ts`](../packages/core/src/ledger.ts), `session.ts`.
-*Test vectors:* [`test-vectors/ledger.json`](test-vectors/ledger.json). *(JSON Schemas for each
-payload will be published under [`../schema/`](../schema/).)*
+*Test vectors:* [`test-vectors/ledger.json`](test-vectors/ledger.json). *JSON Schemas (Draft 2020-12)
+for the entry envelope and the `session.open`/`session.seal` payloads — and for the experiment
+definition of §6 — are published under [`../schema/`](../schema/) (see [`schema/README.md`](../schema/README.md));
+`python schema/check.py` validates the test vectors and sample entries against them. The schemas are a
+faithful restatement of these requirements, not an independent authority — on any conflict this spec
+wins.*
 
 ## 10. Generation and output commitment
 

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common.schema.json",
+  "title": "PsiMeter shared definitions",
+  "description": "Reusable $defs shared by the PsiMeter JSON Schemas. The normative formats live in spec/psimeter-protocol.md; packages/core/src/types.ts is the implementing source. $id values are relative filenames, resolvable from the schema/ directory.",
+  "$defs": {
+    "hashString": {
+      "description": "A hash string (spec §5.1): the algorithm, a colon, and the lowercase-hex digest. PsiMeter uses SHA-256 (64 hex digits). GENESIS_PREV is sha256: followed by 64 zeros.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "hex": {
+      "description": "Lowercase hexadecimal string (no prefix), e.g. a beacon round value or signature.",
+      "type": "string",
+      "pattern": "^[0-9a-f]+$"
+    },
+    "ed25519Key": {
+      "description": "An Ed25519 public key (spec §5.3): the literal prefix ed25519: followed by lowercase hex.",
+      "type": "string",
+      "pattern": "^ed25519:[0-9a-f]+$"
+    },
+    "ed25519Sig": {
+      "description": "An Ed25519 signature (spec §5.3): the literal prefix ed25519: followed by lowercase hex.",
+      "type": "string",
+      "pattern": "^ed25519:[0-9a-f]+$"
+    },
+    "anchor": {
+      "description": "The human anchor (spec §7.2): the first 60 bits of the precommit digest as twelve Crockford base-32 symbols (alphabet excludes I, L, O, U), in three hyphen-separated groups of four.",
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$"
+    },
+    "committableValue": {
+      "description": "A value admissible in a content-hashed experiment definition's params/stimuli (spec §4, [PSI-EXP-2]): strings and safe integers only, nested in arrays/objects. Booleans, nulls and floats are rejected so the canonical byte form is portable across languages.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "integer" },
+        { "type": "array", "items": { "$ref": "#/$defs/committableValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/committableValue" } }
+      ]
+    },
+    "beaconRef": {
+      "description": "A public-beacon pulse reference (spec §8.1, BeaconRef). source/round/value are required; chainHash/signature are optional.",
+      "type": "object",
+      "required": ["source", "round", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "round": { "type": "integer", "minimum": 0 },
+        "value": { "$ref": "#/$defs/hex" },
+        "chainHash": { "$ref": "#/$defs/hex" },
+        "signature": { "$ref": "#/$defs/hex" }
+      }
+    },
+    "entropyKind": {
+      "description": "Physical/logical class of an entropy source (spec D1, types.ts EntropyKind).",
+      "enum": ["os", "cpu-rdseed", "usb-trng", "qrng"]
+    },
+    "entropySource": {
+      "description": "The recorded entropy source (spec §9.4, §10; types.ts EntropySource projection {id, kind, confirmatory, metadata}).",
+      "type": "object",
+      "required": ["id", "kind", "confirmatory", "metadata"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "$ref": "#/$defs/entropyKind" },
+        "confirmatory": { "type": "boolean" },
+        "metadata": { "$ref": "#/$defs/entropyMetadata" }
+      }
+    },
+    "entropyMetadata": {
+      "description": "Entropy source metadata (types.ts EntropyMetadata). sampling holds the exact, frozen sampling parameters and is required.",
+      "type": "object",
+      "required": ["sampling"],
+      "additionalProperties": false,
+      "properties": {
+        "deviceId": { "type": "string" },
+        "firmware": { "type": "string" },
+        "driver": { "type": "string" },
+        "sampling": { "type": "object" }
+      }
+    },
+    "witnessAttestation": {
+      "description": "One witness co-signature (spec §13.1, [PSI-WITNESS-2]; types.ts WitnessAttestation). witnessRound is bound inside the signed statement.",
+      "type": "object",
+      "required": ["witnessPubKey", "witnessRound", "witnessChainHash", "witnessSig"],
+      "additionalProperties": false,
+      "properties": {
+        "witnessPubKey": { "$ref": "#/$defs/ed25519Key" },
+        "witnessRound": { "type": "integer", "minimum": 0 },
+        "witnessChainHash": { "$ref": "#/$defs/hex" },
+        "witnessSig": { "$ref": "#/$defs/ed25519Sig" },
+        "feedSeq": { "type": "integer", "minimum": 0 },
+        "feedEntryHash": { "$ref": "#/$defs/hashString" }
+      }
+    },
+    "witnessBlock": {
+      "description": "The seal's session-level witness summary (server kinds/*.ts): the quorum threshold, the distinct co-signing keys, and the open/seal attestation sets.",
+      "type": "object",
+      "required": ["threshold", "keys", "open", "seal"],
+      "additionalProperties": false,
+      "properties": {
+        "threshold": { "type": "integer", "minimum": 1 },
+        "keys": { "type": "array", "items": { "$ref": "#/$defs/ed25519Key" } },
+        "open": { "type": "array", "items": { "$ref": "#/$defs/witnessAttestation" } },
+        "seal": { "type": "array", "items": { "$ref": "#/$defs/witnessAttestation" } }
+      }
+    },
+    "witnessedCheckpoint": {
+      "description": "A micro-PK checkpoint persisted in the seal with its live witness co-signatures (spec §13.2, [PSI-WITNESS-3]; server kinds/microPk.ts WitnessedCheckpoint).",
+      "type": "object",
+      "required": ["trial", "root", "witness"],
+      "additionalProperties": false,
+      "properties": {
+        "trial": { "type": "integer", "minimum": 0 },
+        "root": { "$ref": "#/$defs/hashString" },
+        "witness": { "type": "array", "items": { "$ref": "#/$defs/witnessAttestation" } }
+      }
+    }
+  }
+}

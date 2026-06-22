@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "experiment-definition.schema.json",
+  "title": "PsiMeter ExperimentDefinition",
+  "description": "A versioned, immutable, content-addressed experiment definition (spec §6; types.ts ExperimentDefinition). experimentHash = H(PCJ(definition)) over the WHOLE object, so any added member is part of the hash. The schema is intentionally open ([PSI-EXP-4]: the format may grow without invalidating sealed sessions, e.g. the published precognition definition carries a contentWarning); additional members are permitted but MUST be canonicalizable (strings/integers, nested in arrays/objects).",
+  "type": "object",
+  "required": ["id", "version", "title", "kind", "params"],
+  "allOf": [
+    {
+      "description": "[PSI-EXP-1]: a definition MUST carry at least one of intentions/choices (the committable vocabulary).",
+      "anyOf": [
+        { "required": ["intentions"] },
+        { "required": ["choices"] }
+      ]
+    }
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "title": { "type": "string" },
+    "kind": {
+      "description": "A registered experiment kind (spec §11). The reference registry has two.",
+      "enum": ["micro-pk-binary", "precognition-presentiment"]
+    },
+    "params": {
+      "description": "Kind-specific parameters, integers/strings only ([PSI-EXP-2]).",
+      "type": "object",
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/committableValue" }
+    },
+    "intentions": {
+      "description": "Committable vocabulary for micro-PK (HIGH/LOW/BASELINE).",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "choices": {
+      "description": "Committable vocabulary for other kinds (option ids).",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "stimuli": {
+      "description": "OPTIONAL kind-specific presentation data, frozen per version; integers/strings only ([PSI-EXP-2]).",
+      "type": "object",
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/committableValue" }
+    }
+  },
+  "additionalProperties": { "$ref": "common.schema.json#/$defs/committableValue" }
+}

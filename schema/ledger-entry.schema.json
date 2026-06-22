@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ledger-entry.schema.json",
+  "title": "PsiMeter ledger entry envelope",
+  "description": "One immutable, hash-chained ledger entry (spec §9.1). entryHash = H(PCJ({seq, ts, prevHash, type, payload})) — entryHash itself excluded. seq is 0 for genesis then strictly +1; prevHash is the previous entryHash (GENESIS_PREV for the first). The payload schema is dispatched by type: session.open and session.seal are constrained here; the other types' payloads (genesis, baseline.seal, external.anchor, witness.anchor) are accepted as objects (out of scope of this schema set). witness.attest lives only in the sibling witness feed (§13), never the main ledger.",
+  "type": "object",
+  "required": ["seq", "ts", "prevHash", "type", "payload", "entryHash"],
+  "additionalProperties": false,
+  "properties": {
+    "seq": { "type": "integer", "minimum": 0 },
+    "ts": {
+      "description": "ISO-8601 timestamp; informational only — the beacon is the trusted time.",
+      "type": "string"
+    },
+    "prevHash": { "$ref": "common.schema.json#/$defs/hashString" },
+    "type": {
+      "enum": [
+        "genesis",
+        "session.open",
+        "session.seal",
+        "baseline.seal",
+        "external.anchor",
+        "witness.anchor"
+      ]
+    },
+    "payload": { "type": "object" },
+    "entryHash": { "$ref": "common.schema.json#/$defs/hashString" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "session.open" } } },
+      "then": { "properties": { "payload": { "$ref": "session-open.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "session.seal" } } },
+      "then": { "properties": { "payload": { "$ref": "session-seal.schema.json" } } }
+    }
+  ]
+}

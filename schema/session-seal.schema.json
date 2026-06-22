@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "session-seal.schema.json",
+  "title": "PsiMeter session.seal payload",
+  "description": "The payload of a session.seal ledger entry (spec §9.4, §11). Two kind-specific shapes share the provenance spine {sessionId, openEntryHash, outputCommitment, rawSha256, rawBlobRef}; micro-PK adds {leafBytes, nSamples, ones} and precognition adds {trials, hits, optionsPerTrial}. Per [PSI-LEDGER-5] no derived real-valued statistic (e.g. a z-score) appears — only integer counts. Witness fields (witnessed, witness, checkpoints) are OPTIONAL and additive (§13); when absent the seal is byte-identical to a pre-witness seal.",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "micro-pk-binary seal",
+      "type": "object",
+      "required": [
+        "sessionId",
+        "openEntryHash",
+        "outputCommitment",
+        "rawSha256",
+        "rawBlobRef",
+        "leafBytes",
+        "nSamples",
+        "ones"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sessionId": { "type": "string" },
+        "openEntryHash": { "$ref": "common.schema.json#/$defs/hashString" },
+        "outputCommitment": { "$ref": "common.schema.json#/$defs/hashString" },
+        "rawSha256": { "$ref": "common.schema.json#/$defs/hashString" },
+        "rawBlobRef": { "type": "string" },
+        "leafBytes": {
+          "description": "Merkle leaf size in octets, for re-verification (§10).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "nSamples": {
+          "description": "Total bits generated.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "ones": {
+          "description": "Count of 1-bits (the display z is derived from these, never stored).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "witnessed": { "type": "boolean" },
+        "witness": { "$ref": "common.schema.json#/$defs/witnessBlock" },
+        "checkpoints": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/witnessedCheckpoint" }
+        }
+      }
+    },
+    {
+      "title": "precognition-presentiment seal",
+      "type": "object",
+      "required": [
+        "sessionId",
+        "openEntryHash",
+        "outputCommitment",
+        "rawSha256",
+        "rawBlobRef",
+        "trials",
+        "hits",
+        "optionsPerTrial"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sessionId": { "type": "string" },
+        "openEntryHash": { "$ref": "common.schema.json#/$defs/hashString" },
+        "outputCommitment": { "$ref": "common.schema.json#/$defs/hashString" },
+        "rawSha256": { "$ref": "common.schema.json#/$defs/hashString" },
+        "rawBlobRef": { "type": "string" },
+        "trials": {
+          "description": "Number of forced-choice trials in the session.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "hits": {
+          "description": "Count of correct predictions (the display hit-rate z is derived from these, never stored).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "optionsPerTrial": {
+          "description": "Options per trial; the chance hit rate is 1/optionsPerTrial (§12.1).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "witnessed": { "type": "boolean" },
+        "witness": { "$ref": "common.schema.json#/$defs/witnessBlock" }
+      }
+    }
+  ]
+}

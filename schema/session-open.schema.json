@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "session-open.schema.json",
+  "title": "PsiMeter session.open payload",
+  "description": "The payload of a session.open ledger entry (spec §9.4): the signed pre-commitment context recorded before generation. A verifier re-derives experimentHash from {experimentId, experimentVersion}, recomputes precommit/anchor from the PrecommitInput (§7), and checks operatorSig against operatorPubKey.",
+  "type": "object",
+  "required": [
+    "sessionId",
+    "experimentId",
+    "experimentVersion",
+    "intention",
+    "operatorPubKey",
+    "operatorSig",
+    "beacon",
+    "entropySource",
+    "serverNonce",
+    "precommit",
+    "anchor"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "sessionId": { "type": "string" },
+    "experimentId": { "type": "string" },
+    "experimentVersion": { "type": "integer", "minimum": 1 },
+    "intention": {
+      "description": "The committed choice (§7 vocabulary). Per-trial kinds (precognition) commit the empty string at the session level (§11.2).",
+      "type": "string"
+    },
+    "operatorPubKey": { "$ref": "common.schema.json#/$defs/ed25519Key" },
+    "operatorSig": { "$ref": "common.schema.json#/$defs/ed25519Sig" },
+    "beacon": { "$ref": "common.schema.json#/$defs/beaconRef" },
+    "entropySource": { "$ref": "common.schema.json#/$defs/entropySource" },
+    "serverNonce": { "type": "string" },
+    "precommit": { "$ref": "common.schema.json#/$defs/hashString" },
+    "anchor": { "$ref": "common.schema.json#/$defs/anchor" }
+  }
+}

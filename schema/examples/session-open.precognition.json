@@ -1,0 +1,32 @@
+{
+  "seq": 7,
+  "ts": "2026-01-02T12:00:00.000Z",
+  "prevHash": "sha256:aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111",
+  "type": "session.open",
+  "payload": {
+    "sessionId": "b1d4e8f2-0000-4000-8000-000000000001",
+    "experimentId": "precognition-presentiment",
+    "experimentVersion": 1,
+    "intention": "",
+    "operatorPubKey": "ed25519:2222222222222222222222222222222222222222222222222222222222222222",
+    "operatorSig": "ed25519:33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+    "beacon": {
+      "source": "drand",
+      "round": 29750100,
+      "value": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      "chainHash": "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971"
+    },
+    "entropySource": {
+      "id": "os",
+      "kind": "os",
+      "confirmatory": false,
+      "metadata": {
+        "sampling": { "source": "node:crypto.randomBytes" }
+      }
+    },
+    "serverNonce": "0011223344556677889aabbccddeeff0",
+    "precommit": "sha256:bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222",
+    "anchor": "ABCD-EFGH-JKMN"
+  },
+  "entryHash": "sha256:cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333"
+}

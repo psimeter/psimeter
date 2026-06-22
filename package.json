@@ -23,6 +23,7 @@
     "smoke": "npm --workspace @psimeter/server run smoke",
     "smoke:witness": "npm --workspace @psimeter/server run smoke:witness",
     "anchor": "npm --workspace @psimeter/server run anchor",
+    "schema:check": "python schema/check.py",
     "purge": "node scripts/purge-ledger.mjs"
   }
 }
