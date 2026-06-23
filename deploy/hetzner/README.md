@@ -21,12 +21,13 @@ The box pulls this branch from GitHub, then runs the two scripts:
 ```sh
 ssh root@<server-ip> bash -s <<'EOF'
 set -euo pipefail
+git config --global --add safe.directory /opt/psimeter   # deploy.sh chowns the tree to the service user
 if [ ! -d /opt/psimeter/.git ]; then
   apt-get update -qq && apt-get install -y -qq git
   git clone --branch deploy/hetzner https://github.com/psimeter/psimeter.git /opt/psimeter
 fi
 cd /opt/psimeter
-git fetch origin deploy/hetzner && git reset --hard origin/deploy/hetzner
+git fetch origin deploy/hetzner && git reset --hard FETCH_HEAD
 bash deploy/hetzner/bootstrap.sh
 bash deploy/hetzner/deploy.sh
 EOF

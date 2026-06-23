@@ -40,6 +40,10 @@ if ! command -v caddy >/dev/null 2>&1; then
 fi
 echo "[bootstrap] $(caddy version | head -1)"
 
+# --- let root operate the git repo even though deploy.sh chowns it to the
+#     service user (otherwise redeploys fail with "dubious ownership") ---
+git config --global --add safe.directory "$APP_DIR"
+
 # --- service user (no login shell; home is the app dir) ---
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   echo "[bootstrap] creating service user $SERVICE_USER"
