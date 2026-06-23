@@ -1,0 +1,7 @@
+# scratch renders / build logs
+_*.png
+_*.pdf
+_*.log
+
+# built PDF — the tracked copy is the one served at packages/client/public/
+psimeter-whitepaper.pdf
