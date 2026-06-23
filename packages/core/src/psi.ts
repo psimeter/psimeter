@@ -114,8 +114,18 @@ export function directionalZ(choice: string, z: number | null): number | null {
 
 /** The test-martingale psi score over an operator's directional per-session z's. */
 export function psiScore(dirzs: number[]): PsiScore {
-  const n = dirzs.length;
-  const sumZ = dirzs.reduce((a, b) => a + b, 0);
+  return psiScoreFromStats(dirzs.length, dirzs.reduce((a, b) => a + b, 0));
+}
+
+/**
+ * The psi score from its two SUFFICIENT STATISTICS — the scored-session count `n`
+ * and `sumZ = Σ d_i` — without needing the per-session list. The wealth depends on
+ * nothing else (see the construction above), so an incremental materialized view
+ * can keep just these two running numbers per operator and call this (spec D18).
+ * Identical output to `psiScore` for the same (n, sumZ).
+ */
+export function psiScoreFromStats(scoredSessions: number, sumZ: number): PsiScore {
+  const n = scoredSessions;
 
   // W = Σ_j (1/J) · exp(δ_j·S − n·δ_j²/2), via log-sum-exp so a strong, real
   // operator's astronomically large wealth never overflows.

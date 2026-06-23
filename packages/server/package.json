@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts",
     "dev": "tsx src/index.ts",
     "smoke": "tsx src/smoke.ts",
+    "smoke:readmodel": "tsx src/readModelSmoke.ts",
     "smoke:witness": "tsx src/witnessSmoke.ts",
     "anchor": "tsx src/anchorCli.ts",
     "build": "tsc -p tsconfig.json"

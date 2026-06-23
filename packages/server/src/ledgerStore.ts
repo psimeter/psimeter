@@ -13,7 +13,11 @@ import { appendEntry, type LedgerEntry, type LedgerEntryType } from '@psimeter/c
 export class LedgerStore {
   private head: LedgerEntry | null = null;
 
-  constructor(private readonly path: string) {
+  /**
+   * @param onAppend optional sink called with each newly appended entry (after it
+   *   is persisted), e.g. the in-memory read-model materialized view (spec D18).
+   */
+  constructor(private readonly path: string, private readonly onAppend?: (entry: LedgerEntry) => void) {
     if (existsSync(path)) {
       const lines = readFileSync(path, 'utf8').split(/\r?\n/).filter((l) => l.length > 0);
       if (lines.length > 0) this.head = JSON.parse(lines[lines.length - 1]!) as LedgerEntry;
@@ -31,6 +35,7 @@ export class LedgerStore {
     const entry = appendEntry(this.head, type, payload);
     this.head = entry;
     appendFileSync(this.path, JSON.stringify(entry) + '\n');
+    this.onAppend?.(entry);
     return entry;
   }
 

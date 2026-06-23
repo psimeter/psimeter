@@ -127,7 +127,7 @@ function num(v: unknown): number | null {
   return typeof v === 'number' ? v : null;
 }
 
-function toSummary(j: Joined): SessionSummary {
+export function toSummary(j: Joined): SessionSummary {
   const o = j.open.payload as OpenPayload;
   const s = j.seal ? (j.seal.payload as SealPayload) : null;
   return {

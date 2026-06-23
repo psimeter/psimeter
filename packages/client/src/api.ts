@@ -341,6 +341,13 @@ export interface OperatorRanking {
   psi: PsiScore;
 }
 
+/** The caller's own standing, pinned even when outside the top-N (spec D18). */
+export interface SelfRanking {
+  ranking: OperatorRanking;
+  /** 1-based rank among eligible operators, or null when not yet eligible. */
+  rank: number | null;
+}
+
 export interface Leaderboard {
   operators: OperatorRanking[];
   meta: {
@@ -351,10 +358,12 @@ export interface Leaderboard {
     candidateMinSessions: number;
     expectedFalseCandidates: number;
   };
+  /** Present when an operator key was supplied; their pinned standing. */
+  self?: SelfRanking | null;
 }
 
-export async function fetchLeaderboard(): Promise<Leaderboard> {
-  const res = await fetch('/api/leaderboard');
+export async function fetchLeaderboard(operator?: string): Promise<Leaderboard> {
+  const res = await fetch(`/api/leaderboard${operator ? `?operator=${encodeURIComponent(operator)}` : ''}`);
   if (!res.ok) throw new Error('could not load leaderboard');
   return (await res.json()) as Leaderboard;
 }

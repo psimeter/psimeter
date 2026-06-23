@@ -4,9 +4,12 @@
 
 import { el } from '../ui';
 import type { Disposer } from '../router';
-import { fetchLeaderboard, type Leaderboard, type OperatorRanking } from '../api';
+import { fetchLeaderboard, type Leaderboard, type OperatorRanking, type SelfRanking } from '../api';
 import { getOperatorPubKey } from '../identity';
 import { loading, errorBox, stat, shortKey, psiBadge } from '../widgets';
+
+/** Mirrors the server's top-N leaderboard size (readModel.ts LEADERBOARD_SIZE). */
+const LEADERBOARD_SHOWN = 25;
 
 export function renderLeaderboard(outlet: HTMLElement): Disposer {
   let disposed = false;
@@ -29,7 +32,8 @@ export function renderLeaderboard(outlet: HTMLElement): Disposer {
 
   void (async () => {
     try {
-      const [board, me] = await Promise.all([fetchLeaderboard(), getOperatorPubKey().catch(() => '')]);
+      const me = await getOperatorPubKey().catch(() => '');
+      const board = await fetchLeaderboard(me);
       if (!disposed) body.replaceChildren(...render(board, me));
     } catch (e) {
       if (!disposed) body.replaceChildren(errorBox(e));
@@ -57,12 +61,45 @@ function render(board: Leaderboard, me: string): HTMLElement[] {
   ]);
 
   const blocks = [overview, list];
+
+  // Pin the viewer's own standing when they're not already in the shown top-N (D18),
+  // so a player always sees where they stand without any pagination.
+  const shown = new Set(board.operators.map((o) => o.operatorPubKey));
+  if (board.self && me && !shown.has(me)) {
+    blocks.push(el('div', { class: 'card' }, [
+      el('span', { class: 'eyebrow' }, 'Your standing'),
+      selfRow(board.self, m.candidateMinSessions),
+    ]));
+  }
+
   // Honest look-elsewhere note, kept small and friendly (D4/D15).
   if (m.eligibleOperators > 0) {
     blocks.push(el('p', { class: 'faint', style: 'margin:2px 0 0;font-size:12.5px' },
       `With ${m.eligibleOperators} player(s) in the running, you'd expect roughly ${m.expectedFalseCandidates.toFixed(2)} to reach “candidate” by luck alone — which is exactly why candidates get re-tested before anything is claimed.`));
   }
   return blocks;
+}
+
+function selfRow(self: SelfRanking, minSessions: number): HTMLElement {
+  const r = self.ranking;
+  const toGo = Math.max(0, minSessions - r.psi.scoredSessions);
+  const sub = self.rank === null
+    ? `${r.psi.scoredSessions} session${r.psi.scoredSessions === 1 ? '' : 's'}${toGo > 0 ? ` · ${toGo} more to qualify` : ''}`
+    : `${r.psi.scoredSessions} sessions · outside the top ${LEADERBOARD_SHOWN} — keep climbing`;
+  return el('div', { class: 'rows' }, [
+    el('div', { class: 'psi-row me' }, [
+      el('span', { class: 'rank' }, self.rank ? `#${self.rank}` : '—'),
+      el('span', { class: 'psi-pts tnum' }, String(r.psi.points)),
+      el('div', { class: 'psi-who' }, [
+        el('div', { class: 'psi-who-top' }, [
+          el('span', { class: 'mono' }, shortKey(r.operatorPubKey)),
+          el('span', { class: 'you-tag' }, 'you'),
+        ]),
+        el('span', { class: 'faint psi-sub' }, sub),
+      ]),
+      psiBadge(r.psi),
+    ]),
+  ]);
 }
 
 function table(rows: OperatorRanking[], me: string, minSessions: number): HTMLElement {

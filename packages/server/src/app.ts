@@ -8,12 +8,11 @@ import { LedgerStore } from './ledgerStore.js';
 import { loadExperiment, listExperiments } from './experiments.js';
 import {
   LedgerReader,
-  globalStats,
   experimentStat,
-  leaderboard,
   psiForOperator,
   type OpenPayload,
 } from './ledgerReader.js';
+import { ReadModel } from './readModel.js';
 import { saveContact } from './contactStore.js';
 import { selectEntropySource } from './select.js';
 import { selectBeacon, type BeaconProvider } from './beacon.js';
@@ -90,13 +89,20 @@ const SESSION_DETAIL_ROUTE = /^\/api\/sessions\/([^/]+)$/;
  *      (Phase C). The server reads NOTHING from this socket — it is one-way.
  */
 export function createApp(): http.Server {
-  const store = new LedgerStore(ledgerPath);
+  // The materialized read-model view (spec D18): fold the existing ledger once at
+  // boot, then keep it current via the store's onAppend hook. It backs the hot
+  // browse endpoints (/api/stats, /api/psi, /api/leaderboard) in O(1)/O(top-N)
+  // instead of recomputing over the whole ledger per request. Display-only and
+  // rebuildable — authority stays with analysis/analyze.py (D4).
+  const readModel = new ReadModel();
+  const reader = new LedgerReader(ledgerPath);
+  for (const e of reader.entries()) readModel.ingest(e);
+  const store = new LedgerStore(ledgerPath, (e) => readModel.ingest(e));
   store.ensureGenesis();
   const entropy: EntropySource = selectEntropySource();
   const beaconProvider = selectBeacon();
   const witness = selectWitnessClient();
   const sessions = new Map<string, SessionContext>();
-  const reader = new LedgerReader(ledgerPath);
 
   // eslint-disable-next-line no-console
   console.log(
@@ -140,12 +146,14 @@ export function createApp(): http.Server {
         return;
       }
       if (path === '/api/stats') {
-        sendJson(res, 200, globalStats(reader.summaries()));
+        sendJson(res, 200, readModel.stats());
         return;
       }
       // Per-operator psi leaderboard (D15 / H1): consistency, not lucky sessions.
+      // Top-N of ELIGIBLE operators only (no pagination); an optional ?operator=
+      // pins the caller's own standing + rank so they always see where they are (D18).
       if (path === '/api/leaderboard') {
-        sendJson(res, 200, leaderboard(reader.summaries()));
+        sendJson(res, 200, readModel.leaderboard(url.searchParams.get('operator') ?? undefined));
         return;
       }
       // Configured live witnesses (D16): identities + threshold, so the in-browser
@@ -165,7 +173,7 @@ export function createApp(): http.Server {
           sendJson(res, 400, { error: 'operator required' });
           return;
         }
-        sendJson(res, 200, { psi: psiForOperator(reader.summaries(), operator) });
+        sendJson(res, 200, { psi: readModel.psiFor(operator) });
         return;
       }
       const detailMatch = path.match(SESSION_DETAIL_ROUTE);
@@ -174,7 +182,7 @@ export function createApp(): http.Server {
         return;
       }
       if (path === '/api/sessions') {
-        handleSessionList(res, reader, url.searchParams);
+        handleSessionList(res, reader, readModel, url.searchParams);
         return;
       }
     }
@@ -310,13 +318,14 @@ function handleExperiments(res: http.ServerResponse, reader: LedgerReader): void
   sendJson(res, 200, { experiments });
 }
 
-function handleSessionList(res: http.ServerResponse, reader: LedgerReader, params: URLSearchParams): void {
+function handleSessionList(res: http.ServerResponse, reader: LedgerReader, readModel: ReadModel, params: URLSearchParams): void {
   const operator = params.get('operator');
   const all = reader.summaries();
   let rows = operator ? all.filter((r) => r.operatorPubKey === operator) : all;
-  // The operator's psi score is computed over ALL their sessions, before the
-  // display slice below (D15) — so the history page can show the live ladder.
-  const psi = operator ? psiForOperator(all, operator) : null;
+  // The operator's psi score comes from the materialized view (O(1), same source
+  // as the leaderboard), so the history page shows the live ladder (D15/D18). The
+  // session LIST itself is the cold path and still read from the ledger.
+  const psi = operator ? readModel.psiFor(operator) : null;
   const limit = Math.min(Math.max(Number(params.get('limit')) || 200, 1), 1000);
   rows = rows.slice().reverse().slice(0, limit); // most recent first
   sendJson(res, 200, { sessions: rows, psi });
