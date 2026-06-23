@@ -1,0 +1,6 @@
+# PsiMeter — Caddy reverse proxy with automatic HTTPS (Let's Encrypt).
+# WebSocket upgrades (the one-way session stream) pass through transparently.
+@DOMAIN@ {
+	encode zstd gzip
+	reverse_proxy localhost:8787
+}
